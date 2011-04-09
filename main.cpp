@@ -7,6 +7,10 @@
 #include "MiroWindow.h"
 #include "assignment1.h"
 #include <FreeImage.h>
+#include "Camera.h"
+#include "Image.h"
+
+using namespace std;
 
 
 int
