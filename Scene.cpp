@@ -128,7 +128,7 @@ Scene::raytraceImage(Camera *cam, Image *img)
 			#if defined (PATH_TRACING) || defined(DOF)
 			for (int k = 0; k < TRACE_SAMPLES; ++k)
 			{
-                ray = cam->eyeRay(j, i, width, height, true);
+                ray = cam->eyeRay(j, i, width, height, false);
 				if (traceScene(ray, tempShadeResult, depth))
 				{
 					shadeResult += tempShadeResult;
@@ -143,7 +143,7 @@ Scene::raytraceImage(Camera *cam, Image *img)
             ray = cam->eyeRay(j, i, width, height, false);
 			if (traceScene(ray, shadeResult, depth))
 			{
-				tempImage[i*width+j] = shadeResult;
+				img->setPixel(j, i, shadeResult);
 			}
 			#ifdef STATS
 			Stats::Primary_Rays++;
@@ -278,10 +278,11 @@ bool Scene::traceScene(const Ray& ray, Vector3& shadeResult, int depth)
     if (depth >= 0)
     {
 		// AL: shouldn't decrementing depth be independent if there was a trace hit?
-		--depth;
 		if (trace(hitInfo, ray))
 		{
             hit = true;
+
+			--depth;
 
 			shadeResult = hitInfo.material->shade(ray, hitInfo, *this);
 

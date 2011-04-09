@@ -1,33 +1,53 @@
 #include "assignment1.h"
 #include <math.h>
+#include <stdio.h>
 #include "Miro.h"
 #include "includes.h"
+#include "Emissive.h"
 
 using namespace std;
 
 void 
 makeTask1Scene()
 {
-    g_camera = new Camera;
     g_scene = new Scene;
-    g_image = new Image;
+ 
+// fake squarelight
 
-    g_image->resize(512, 512);
+	Emissive* lightMat = new Emissive;
+	lightMat->setPower(25.0f);		// 100W / 4 m^2
+
+	TriangleMesh * slight1= new TriangleMesh;
+    slight1->createSingleTriangle();
+    slight1->setV1(Vector3( -1, 10, -1));
+    slight1->setV2(Vector3( -1, 10, 1));
+    slight1->setV3(Vector3( 1, 10, 1));
+    slight1->setN1(Vector3(0, -1, 0));
+    slight1->setN2(Vector3(0, -1, 0));
+    slight1->setN3(Vector3(0, -1, 0));
     
-    // set up the camera
-    g_camera->setBGColor(Vector3(0.0f, 0.0f, 0.2f));
-    g_camera->setEye(Vector3(0, 5, 5));
-    g_camera->setLookAt(Vector3(0, 0, 0));
-    g_camera->setUp(Vector3(0, 1, 0));
-    g_camera->setFOV(90);
+    Triangle* st = new Triangle;
+    st->setIndex(0);
+    st->setMesh(slight1);
+    st->setMaterial(lightMat);
+    g_scene->addObject(st);
 
-    // create and place a point light source
-    SquareLight* light = new SquareLight;
-    light->setPosition(Vector3(0, 10, 0));
-	light->setNormal(Vector3(0,-1, 0));
-    light->setColor(Vector3(1, 1, 1));
-    light->setWattage(100);
-    g_scene->addLight(light);
+	TriangleMesh * slight2 = new TriangleMesh;
+    slight2->createSingleTriangle();
+    slight2->setV1(Vector3( -1, 10, -1));
+    slight2->setV2(Vector3( 1, 10, -1));
+    slight2->setV3(Vector3( 1, 10, 1));
+    slight2->setN1(Vector3(0, -1, 0));
+    slight2->setN2(Vector3(0, -1, 0));
+    slight2->setN3(Vector3(0, -1, 0));
+    
+    Triangle* st2 = new Triangle;
+    st2->setIndex(0);
+    st2->setMesh(slight2);
+    st2->setMaterial(lightMat);
+    g_scene->addObject(st2);
+
+// mirror
 
     TriangleMesh * mirror = new TriangleMesh;
     mirror->createSingleTriangle();
@@ -63,8 +83,30 @@ makeTask1Scene()
 	p->setMaterial(new Phong());
 	g_scene->addObject(p);
 
-
     g_scene->preCalc();
+
+	HitInfo hitInfo(0, Vector3(0), Vector3(0,1,0));
+	hitInfo.material = p->getMaterial();
+	Vector3 shadeResult(0);
+
+	FILE *fp;
+
+	fp = fopen("path_tracing_irradiance.txt", "w");
+
+	for (int k = 0; k < 1000000; ++k)
+	{
+        Ray ray = ray.random(hitInfo);
+		Vector3 tempShadeResult;
+		if (g_scene->traceScene(ray, tempShadeResult, 0))
+		{
+			shadeResult += tempShadeResult;
+		}
+		if (k % 1000 == 0)
+			fprintf(fp, "%i %f\n", k, shadeResult[0]/(k+1));
+	}
+	fclose(fp);
+	shadeResult /= TRACE_SAMPLES; 
+
 }
 
 void

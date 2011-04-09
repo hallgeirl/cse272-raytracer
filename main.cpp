@@ -32,9 +32,9 @@ main(int argc, char*argv[])
 #ifndef NO_GFX
     miro.mainLoop();
 #else
-    g_camera->setRenderer(Camera::RENDER_RAYTRACE);
-    g_camera->click(g_scene, g_image);
-    g_image->writePPM();
+//    g_camera->setRenderer(Camera::RENDER_RAYTRACE);
+//    g_camera->click(g_scene, g_image);
+//    g_image->writePPM();
 #endif
 
 	FreeImage_DeInitialise();

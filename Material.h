@@ -48,6 +48,8 @@ public:
 	void setDensity(const float density) {m_density = density;}
 	float getDensity() const { return m_density; }
 
+	virtual void setPower(const float power) {}
+
     virtual void preCalc() {}
 
     virtual Vector3 shade(const Ray& ray, const HitInfo& hit, const Scene& scene) const;

@@ -8,6 +8,7 @@
 #ifdef WIN32
 #include <windows.h>
 #include <wincon.h>
+#include <conio.h>
 
 // disable useless warnings
 #ifndef __GNUC__
@@ -89,8 +90,8 @@ void warning(const char *fmt,...)
 	_vsnprintf(__internal_console_buffer__, 8191, fmt, msg);
 	va_end (msg);
 
-  cprintf(TEXT_PINK"warning: "TEXT_NORMAL);
-  cprintf("%s", __internal_console_buffer__);
+  _cprintf(TEXT_PINK"warning: "TEXT_NORMAL);
+  _cprintf("%s", __internal_console_buffer__);
 }
 
 void error(const char *fmt,...)
@@ -100,8 +101,8 @@ void error(const char *fmt,...)
 	_vsnprintf(__internal_console_buffer__, 8191, fmt, msg);
 	va_end (msg);
 
-  cprintf(TEXT_RED"error: "TEXT_NORMAL);
-  cprintf("%s", __internal_console_buffer__);
+  _cprintf(TEXT_RED"error: "TEXT_NORMAL);
+  _cprintf("%s", __internal_console_buffer__);
 }
 
 void debug(const char *fmt,...)
@@ -111,8 +112,8 @@ void debug(const char *fmt,...)
 	_vsnprintf(__internal_console_buffer__, 8191, fmt, msg);
 	va_end (msg);
 
-  cprintf(TEXT_GREEN"debug: "TEXT_NORMAL);
-  cprintf("%s", __internal_console_buffer__);
+  _cprintf(TEXT_GREEN"debug: "TEXT_NORMAL);
+  _cprintf("%s", __internal_console_buffer__);
   fflush(stdout);
 }
 
@@ -123,8 +124,8 @@ void fatal(const char *fmt,...)
 	_vsnprintf(__internal_console_buffer__, 8191, fmt, msg);
 	va_end (msg);
 
-  cprintf(TEXT_RED"fatal error: "TEXT_NORMAL);
-  cprintf("%s",__internal_console_buffer__);
+  _cprintf(TEXT_RED"fatal error: "TEXT_NORMAL);
+  _cprintf("%s",__internal_console_buffer__);
   exit(-1);
 }
 
