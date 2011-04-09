@@ -1,0 +1,46 @@
+MAKE		= make
+AR		= @ar
+CXX     = g++
+MV		= @mv
+RM		= @rm -rf
+MKDIR		= @mkdir
+MKDEP		= @mkdep
+ECHO		= @echo
+INCDIRS		= -I/usr/X11R6/include -Ilib/include -Ilib/include/noise
+#use the following LIBS line for GNU/Linux
+LIBS	 	= -lm -lX11 -lXmu -lXi -lXext -lGL -lGLU -lglut -lIL -lfreeimage
+LIBDIRS 	= -L. -L/usr/X11R6/lib -L/usr/lib -Llib/lib
+LDFLAGS		= -O3 $(LIBDIRS) $(LIBS) -fopenmp
+CXXFLAGS          += $(INCDIRS) -O3 -DOPENMP -fomit-frame-pointer -fopenmp -lopenmp \
+-Wno-deprecated -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_GNU_SOURCE -msse4.1
+
+.SUFFIXES: .cpp .h .d .o
+
+.cpp.o:
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+.d.o:
+	$(ECHO) "Finding dependancies for $<"
+	$(CC) $(CFLAGS) -MD -E $<
+
+SOURCES = $(wildcard lib/src/*.cpp)
+SOURCES += $(wildcard *.cpp)
+OBJS = $(patsubst %.cpp, %.o, $(SOURCES))
+DEPS = $(patsubst %.cpp, %.d, $(SOURCES))
+
+purge: clean
+	$(MAKE) -C lib/src/FreeImage clean
+	$(ECHO) "All clean!"
+
+clean:
+	$(RM) core .deps *.o $(NAME)
+	$(RM) lexer.cpp parse.cpp parse.cpp.h
+	$(RM) lib/src/*.o
+	$(ECHO) "All clean!"
+
+deps:
+	$(ECHO) "Finding dependancies in `pwd`..."
+	$(RM) .deps
+	$(CC) $(CFLAGS) -MD -E $(SOURCES) > /dev/null
+	$(MKDIR) .deps
+	$(MV) $(DEPS) .deps
+
