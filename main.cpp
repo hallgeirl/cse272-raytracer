@@ -22,7 +22,7 @@ main(int argc, char*argv[])
     cout << "Using OpenMP with up to " << omp_get_max_threads() << " threads." << endl;
 #endif
 
-	makeTestScene();
+	makeTask1Scene();
 
     MiroWindow miro(&argc, argv);
 #ifndef NO_GFX

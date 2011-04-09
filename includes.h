@@ -11,6 +11,7 @@
 //Lights and objects
 #include "Sphere.h"
 #include "PointLight.h"
+#include "SquareLight.h"
 #include "TriangleMesh.h"
 #include "Triangle.h"
 #include "Plane.h"

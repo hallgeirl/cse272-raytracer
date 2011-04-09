@@ -5,6 +5,68 @@
 
 using namespace std;
 
+void 
+makeTask1Scene()
+{
+    g_camera = new Camera;
+    g_scene = new Scene;
+    g_image = new Image;
+
+    g_image->resize(512, 512);
+    
+    // set up the camera
+    g_camera->setBGColor(Vector3(0.0f, 0.0f, 0.2f));
+    g_camera->setEye(Vector3(0, 5, 5));
+    g_camera->setLookAt(Vector3(0, 0, 0));
+    g_camera->setUp(Vector3(0, 1, 0));
+    g_camera->setFOV(90);
+
+    // create and place a point light source
+    SquareLight* light = new SquareLight;
+    light->setPosition(Vector3(0, 10, 0));
+	light->setNormal(Vector3(0,-1, 0));
+    light->setColor(Vector3(1, 1, 1));
+    light->setWattage(100);
+    g_scene->addLight(light);
+
+    TriangleMesh * mirror = new TriangleMesh;
+    mirror->createSingleTriangle();
+    mirror->setV1(Vector3( 5, 4, -1));
+    mirror->setV2(Vector3( 5, 6, -1));
+    mirror->setV3(Vector3( 5, 6, 1));
+    mirror->setN1(Vector3(-1, 0, 0));
+    mirror->setN2(Vector3(-1, 0, 0));
+    mirror->setN3(Vector3(-1, 0, 0));
+    
+    Triangle* t = new Triangle;
+    t->setIndex(0);
+    t->setMesh(mirror);
+    t->setMaterial(new Phong(Vector3(1), Vector3(1))); 
+    g_scene->addObject(t);
+
+	TriangleMesh * mirror2 = new TriangleMesh;
+    mirror2->createSingleTriangle();
+    mirror2->setV1(Vector3( 5, 4, -1));
+    mirror2->setV2(Vector3( 5, 4, 1));
+    mirror2->setV3(Vector3( 5, 6, 1));
+    mirror2->setN1(Vector3(-1, 0, 0));
+    mirror2->setN2(Vector3(-1, 0, 0));
+    mirror2->setN3(Vector3(-1, 0, 0));
+    
+    Triangle* t2 = new Triangle;
+    t2->setIndex(0);
+    t2->setMesh(mirror2);
+    t2->setMaterial(new Phong(Vector3(1), Vector3(1))); 
+    g_scene->addObject(t2);
+
+	Plane* p = new Plane();
+	p->setMaterial(new Phong());
+	g_scene->addObject(p);
+
+
+    g_scene->preCalc();
+}
+
 void
 makeCornellScene()
 {
