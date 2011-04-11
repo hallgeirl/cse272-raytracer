@@ -61,7 +61,7 @@ makeTask1Scene()
     Triangle* t = new Triangle;
     t->setIndex(0);
     t->setMesh(mirror);
-    t->setMaterial(new Phong(Vector3(1), Vector3(1))); 
+    t->setMaterial(new Phong(Vector3(0), Vector3(1))); 
     g_scene->addObject(t);
 
 	TriangleMesh * mirror2 = new TriangleMesh;
@@ -76,7 +76,7 @@ makeTask1Scene()
     Triangle* t2 = new Triangle;
     t2->setIndex(0);
     t2->setMesh(mirror2);
-    t2->setMaterial(new Phong(Vector3(1), Vector3(1))); 
+    t2->setMaterial(new Phong(Vector3(0), Vector3(1))); 
     g_scene->addObject(t2);
 
 	Plane* p = new Plane();
@@ -89,20 +89,26 @@ makeTask1Scene()
 	hitInfo.material = p->getMaterial();
 	Vector3 shadeResult(0);
 
-	FILE *fp;
+	FILE *fp = stdout;
 
-	fp = fopen("path_tracing_irradiance.txt", "w");
+	//fp = fopen("path_tracing_irradiance.txt", "w");
 
-	for (int k = 0; k < 1000000; ++k)
+	
+    long double res = 0.;
+    for (int k = 0; k < 10000000000; ++k)
 	{
         Ray ray = ray.random(hitInfo);
 		Vector3 tempShadeResult;
 		if (g_scene->traceScene(ray, tempShadeResult, 0))
 		{
-			shadeResult += tempShadeResult;
+            res += (long double)tempShadeResult[0];
+            cout << tempShadeResult[0] << endl;
+			//shadeResult += tempShadeResult;
 		}
-		if (k % 1000 == 0)
-			fprintf(fp, "%i %f\n", k, shadeResult[0]/(k+1));
+		if ((k+1) % 1000 == 0)
+			fprintf(fp, "%i %3.30lf\n", k, (double)(res/((long double)k+1.)));
+			//fprintf(fp, "%i %3.30lf\n", k, (double)(res/((long double)k+1.)));
+			//fprintf(fp, "%i %f\n", k, shadeResult[0]/((float)k+1));
 	}
 	fclose(fp);
 	shadeResult /= TRACE_SAMPLES; 

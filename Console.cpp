@@ -90,8 +90,8 @@ void warning(const char *fmt,...)
 	_vsnprintf(__internal_console_buffer__, 8191, fmt, msg);
 	va_end (msg);
 
-  _cprintf(TEXT_PINK"warning: "TEXT_NORMAL);
-  _cprintf("%s", __internal_console_buffer__);
+  printf(TEXT_PINK"warning: "TEXT_NORMAL);
+  printf("%s", __internal_console_buffer__);
 }
 
 void error(const char *fmt,...)
@@ -101,8 +101,8 @@ void error(const char *fmt,...)
 	_vsnprintf(__internal_console_buffer__, 8191, fmt, msg);
 	va_end (msg);
 
-  _cprintf(TEXT_RED"error: "TEXT_NORMAL);
-  _cprintf("%s", __internal_console_buffer__);
+  printf(TEXT_RED"error: "TEXT_NORMAL);
+  printf("%s", __internal_console_buffer__);
 }
 
 void debug(const char *fmt,...)
@@ -112,8 +112,8 @@ void debug(const char *fmt,...)
 	_vsnprintf(__internal_console_buffer__, 8191, fmt, msg);
 	va_end (msg);
 
-  _cprintf(TEXT_GREEN"debug: "TEXT_NORMAL);
-  _cprintf("%s", __internal_console_buffer__);
+  printf(TEXT_GREEN"debug: "TEXT_NORMAL);
+  printf("%s", __internal_console_buffer__);
   fflush(stdout);
 }
 
@@ -124,8 +124,8 @@ void fatal(const char *fmt,...)
 	_vsnprintf(__internal_console_buffer__, 8191, fmt, msg);
 	va_end (msg);
 
-  _cprintf(TEXT_RED"fatal error: "TEXT_NORMAL);
-  _cprintf("%s",__internal_console_buffer__);
+  printf(TEXT_RED"fatal error: "TEXT_NORMAL);
+  printf("%s",__internal_console_buffer__);
   exit(-1);
 }
 
