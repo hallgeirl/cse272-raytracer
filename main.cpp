@@ -26,15 +26,21 @@ main(int argc, char*argv[])
 #ifdef OPENMP
     cout << "Using OpenMP with up to " << omp_get_max_threads() << " threads." << endl;
 #endif
-	makeTask1Scene();
 
+
+#if ! defined(NO_GFX) and ! defined(ALTERNATIVE)
     MiroWindow miro(&argc, argv);
-#ifndef NO_GFX
-    //miro.mainLoop();
+    cout << "Executing main rendering loop" << endl;
+    miro.mainLoop();
+#elif ! defined(ALTERNATIVE)
+    cout << "Rendering without display" << endl;
+    g_camera->setRenderer(Camera::RENDER_RAYTRACE);
+    g_camera->click(g_scene, g_image);
+    g_image->writePPM();
 #else
-//    g_camera->setRenderer(Camera::RENDER_RAYTRACE);
-//    g_camera->click(g_scene, g_image);
-//    g_image->writePPM();
+    cout << "Alternative tasks" << endl;
+	makeTask1Scene();
+    //Alternative tasks (like calculations)
 #endif
 
 	FreeImage_DeInitialise();

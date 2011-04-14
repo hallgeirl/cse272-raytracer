@@ -562,7 +562,7 @@ int Scene::tracePhoton(const Vector3& position, const Vector3& direction, const 
 			Stats::Photon_Bounces++;
 #endif
             //Shoot out a new diffuse photon
-            Ray r = ray.random(hit);
+            Ray r = ray.diffuse(hit);
             HitInfo diffHit;
             PHOTON_DEBUG("Tracing diffuse photon");
             return nPhotons + tracePhoton(r.o, r.d, diffuseColor*power/prob[0], depth, bCausticRay);

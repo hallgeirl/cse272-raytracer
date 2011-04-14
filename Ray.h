@@ -112,28 +112,10 @@ class Ray
             Stats::Secondary_Rays++;
 #endif
             //bias to the surface normal
-            float phi = asin(sqrt((float) rand() / (float)RAND_MAX));
-            float theta = 2.0f * PI * ((float) rand() / (float)RAND_MAX);
-
-            Ray random = alignToVector(hitInfo.N, hitInfo.P, theta, phi);
-            random.isDiffuse = true;
-
-            return random;
-        }
-
-        Ray random(const HitInfo & hitInfo) const
-        {
-#ifdef STATS
-            Stats::Secondary_Rays++;
-#endif
-            
-            //Ray random(hitInfo.P, sampleHemisphereDirection(hitInfo.N));
-
-		    float phi = asin(sqrt(frand()));// * PI / 2.0f;
+            float phi = asin(sqrt(frand()));
             float theta = 2.0f * PI * frand();
 
             Ray random = alignToVector(hitInfo.N, hitInfo.P, theta, phi);
-
             random.isDiffuse = true;
 
             return random;
