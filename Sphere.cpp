@@ -17,11 +17,13 @@ Sphere::~Sphere()
 void
 Sphere::renderGL()
 {
+#ifndef NO_GFX
     glColor3f(1, 1, 1);
     glPushMatrix();
     glTranslatef(m_center.x, m_center.y, m_center.z);
     glutWireSphere(m_radius, 20, 20);
     glPopMatrix();
+#endif
 }
 
 bool

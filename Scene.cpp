@@ -36,6 +36,7 @@ Scene * g_scene = 0;
 void
 Scene::openGL(Camera *cam)
 {
+#ifndef NO_GFX
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     cam->drawGL();
@@ -45,6 +46,7 @@ Scene::openGL(Camera *cam)
         m_objects[i]->renderGL();
 
     glutSwapBuffers();
+#endif
 }
 
 void
@@ -89,8 +91,8 @@ Scene::preCalc()
 
 inline float tonemapValue(float value, float maxIntensity)
 {
-    //return sigmoid(6*value-3);
-    return std::min(pow(value / maxIntensity, 0.35f)*1.1f, 1.0f);
+    return sigmoid(20*value-2.5);
+    //return std::min(pow(value / maxIntensity, 0.35f)*1.1f, 1.0f);
 }
 
 void
@@ -143,8 +145,9 @@ Scene::raytraceImage(Camera *cam, Image *img)
             ray = cam->eyeRay(j, i, width, height, false);
 			if (traceScene(ray, shadeResult, depth))
 			{
-				img->setPixel(j, i, shadeResult);
+                tempImage[i*width+j] = shadeResult;
 			}
+
 			#ifdef STATS
 			Stats::Primary_Rays++;
 			#endif
@@ -189,10 +192,7 @@ Scene::raytraceImage(Camera *cam, Image *img)
             for (int k = 0; k < 3; k++)
             {
                 if (finalColor[k] != finalColor[k])
-                {
-                    //cout << finalColor[k] << endl;
                     finalColor[k] = maxIntensity;
-                }
                 
                 finalColor[k] = tonemapValue(finalColor[k], maxIntensity);
             }

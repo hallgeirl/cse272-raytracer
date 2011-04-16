@@ -42,19 +42,22 @@ Camera::click(Scene* pScene, Image* pImage)
 
     if (m_renderer == RENDER_OPENGL)
     {
+        #ifndef NO_GFX
         glDrawBuffer(GL_BACK);
         pScene->openGL(this);
         firstRayTrace = true;
+        #endif
     }
     else if (m_renderer == RENDER_RAYTRACE)
     {
+        #ifndef NO_GFX
         glMatrixMode(GL_PROJECTION);
         glLoadIdentity();
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
 
         glDrawBuffer(GL_FRONT);
-        #ifndef NO_GFX
+
         if (firstRayTrace)
         {
         #endif
@@ -85,6 +88,7 @@ Camera::calcLookAt()
 void
 Camera::drawGL()
 {
+    #ifndef NO_GFX
     // set up the screen with our camera parameters
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -97,6 +101,7 @@ Camera::drawGL()
     gluLookAt(eye().x, eye().y, eye().z,
               vCenter.x, vCenter.y, vCenter.z,
               up().x, up().y, up().z);
+    #endif
 }
 
 

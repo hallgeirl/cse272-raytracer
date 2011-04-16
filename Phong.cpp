@@ -70,7 +70,7 @@ Phong::shade(const Ray &ray, const HitInfo &hit, const Scene &scene) const
         samples = 1;    
         #else
         if (dynamic_cast<SquareLight*>(*lightIter))
-            //samples = 49;
+//            samples = 49;
             samples = 1;
         else
             samples = 1;
@@ -95,15 +95,15 @@ Phong::shade(const Ray &ray, const HitInfo &hit, const Scene &scene) const
 #ifdef STATS 
             Stats::Shadow_Rays++;
 #endif
-            if (scene.trace(hitInfo, Shadow, 0.f, sqrt(falloff)))
+            if (scene.trace(hitInfo, Shadow, 0.f, sqrt(falloff) - epsilon))
             {
-                if (!hitInfo.material->isRefractive())
+                continue;
+/*                if (!hitInfo.material->isRefractive())
                     continue;
 
                 if (dot(hitInfo.N, l) < 0)
                 {
                     continue;
-//                    intensity = .5f;
                 }
                 else
                 {
@@ -111,7 +111,7 @@ Phong::shade(const Ray &ray, const HitInfo &hit, const Scene &scene) const
                                     
                     if (intensity < epsilon) continue;
                     //intensity = std::max(.5f, intensity);
-                }
+                }*/
             }
 #endif
         

@@ -10,44 +10,17 @@ using namespace std;
 void 
 makeTask1Scene()
 {
-    g_scene = new Scene;
- 
-// fake squarelight
+    //real squarelight
+    SquareLight *l = new SquareLight;
+    l->setDimensions(2,2);
+    l->setPosition(Vector3(0,10,0));
+    l->setNormal(Vector3(0,-1,0));
+    l->setUdir(Vector3(1,0,0));
+    l->setWattage(100);
 
-	Emissive* lightMat = new Emissive;
-	lightMat->setPower(25.0f);		// 100W / 4 m^2
+    g_scene->addObject(l);
 
-	TriangleMesh * slight1= new TriangleMesh;
-    slight1->createSingleTriangle();
-    slight1->setV1(Vector3( -1, 10, -1));
-    slight1->setV2(Vector3( -1, 10, 1));
-    slight1->setV3(Vector3( 1, 10, 1));
-    slight1->setN1(Vector3(0, -1, 0));
-    slight1->setN2(Vector3(0, -1, 0));
-    slight1->setN3(Vector3(0, -1, 0));
-    
-    Triangle* st = new Triangle;
-    st->setIndex(0);
-    st->setMesh(slight1);
-    st->setMaterial(lightMat);
-    g_scene->addObject(st);
-
-	TriangleMesh * slight2 = new TriangleMesh;
-    slight2->createSingleTriangle();
-    slight2->setV1(Vector3( -1, 10, -1));
-    slight2->setV2(Vector3( 1, 10, -1));
-    slight2->setV3(Vector3( 1, 10, 1));
-    slight2->setN1(Vector3(0, -1, 0));
-    slight2->setN2(Vector3(0, -1, 0));
-    slight2->setN3(Vector3(0, -1, 0));
-    
-    Triangle* st2 = new Triangle;
-    st2->setIndex(0);
-    st2->setMesh(slight2);
-    st2->setMaterial(lightMat);
-    g_scene->addObject(st2);
-
-// mirror
+    // mirror
 
     TriangleMesh * mirror = new TriangleMesh;
     mirror->createSingleTriangle();
@@ -62,7 +35,7 @@ makeTask1Scene()
     t->setIndex(0);
     t->setMesh(mirror);
     t->setMaterial(new Phong(Vector3(0), Vector3(1))); 
-    //g_scene->addObject(t);
+//    g_scene->addObject(t);
 
 	TriangleMesh * mirror2 = new TriangleMesh;
     mirror2->createSingleTriangle();
@@ -84,18 +57,58 @@ makeTask1Scene()
 	g_scene->addObject(p);
 
     g_scene->preCalc();
+}
 
+void a1task1()
+{
 	HitInfo hitInfo(0, Vector3(0, epsilon, 0), Vector3(0,1,0));
-	hitInfo.material = p->getMaterial();
+	Vector3 shadeResult(0);
+
+	FILE *fp = stdout;
+
+//	fp = fopen("irrad_pathtracing.dat", "w");
+    long double res = 0.;
+    for (long k = 0; k < 10000000; ++k)
+	{
+        Ray ray = ray.diffuse(hitInfo);
+		Vector3 tempShadeResult;
+		if (g_scene->traceScene(ray, tempShadeResult, 0))
+		{
+    //        cout << tempShadeResult[0] << endl;
+            res += (long double)tempShadeResult[0];
+		}
+
+		if (k % 10 == 0 )
+			fprintf(fp, "%ld %2.30lf\n", k, (double)(res/((long double)k+1.)));
+			//fprintf(fp, "%i %3.30lf\n", k, (double)(res/((long double)k+1.)));
+			//fprintf(fp, "%i %f\n", k, shadeResult[0]/((float)k+1));
+	}
+	fclose(fp);
+	shadeResult /= TRACE_SAMPLES; 
+}
+
+void a1task2()
+{
+}
+
+double sampleLightSource(const Vector3& incidentDir)
+{
+/*    Vector3 
+    return 100*dot(incidentDir, Vector3(0, 1, 0))/(incidentDir-);*/
+    return 0;
+}
+
+void a1task3()
+{
+    
+	HitInfo hitInfo(0, Vector3(0, epsilon, 0), Vector3(0,1,0));
 	Vector3 shadeResult(0);
 
 	FILE *fp = stdout;
 
 	fp = fopen("irrad_pathtracing.dat", "w");
-
-	
     long double res = 0.;
-    for (int k = 0; k < 1000000; ++k)
+    for (long k = 0; k < 10000000; ++k)
 	{
         Ray ray = ray.diffuse(hitInfo);
 		Vector3 tempShadeResult;
@@ -103,23 +116,19 @@ makeTask1Scene()
 		{
             res += (long double)tempShadeResult[0];
 		}
-		if (k % 1000 == 0)
-			fprintf(fp, "%i %3.30lf\n", k, (double)(res/((long double)k+1.)));
+
+		if (k % 10 == 0 )
+			fprintf(fp, "%ld %2.30lf\n", k, (double)(res/((long double)k+1.)));
 			//fprintf(fp, "%i %3.30lf\n", k, (double)(res/((long double)k+1.)));
 			//fprintf(fp, "%i %f\n", k, shadeResult[0]/((float)k+1));
 	}
 	fclose(fp);
 	shadeResult /= TRACE_SAMPLES; 
-
 }
 
 void
 makeCornellScene()
 {
-    g_camera = new Camera;
-    g_scene = new Scene;
-    g_image = new Image;
-
     g_image->resize(512, 512);
     
     // set up the camera
@@ -136,12 +145,21 @@ makeCornellScene()
     g_scene->addObject(sp);*/
 
     // create and place a point light source
-    PointLight * light = new PointLight;
+    SquareLight* light = new SquareLight;
     light->setPosition(Vector3(2.5, 4.9, -1));
-    light->setColor(Vector3(1, 1, 1));
+    light->setDimensions(1, 1);
     light->setWattage(40);
+    light->setColor(Vector3(1, 1, 1));
+    light->setUdir(Vector3(1,0,1));
     g_scene->addLight(light);
+    g_scene->addObject(light);
 
+    /*PointLight* light = new PointLight;
+    light->setPosition(Vector3(2.5, 4.9, -1));
+    light->setWattage(40);
+    light->setColor(Vector3(1, 1, 1));
+    g_scene->addLight(light);
+*/
     Material* material = new Phong(Vector3(1.0f));
     TriangleMesh * mesh = new TriangleMesh;
     mesh->load("models/cornell_box_1.obj");
@@ -222,10 +240,6 @@ makeTestScene()
 void
 A1makeSphereScene()
 {
-    g_camera = new Camera;
-    g_scene = new Scene;
-    g_image = new Image;
-
     g_image->resize(2048, 2048);
     
     // set up the camera
@@ -273,9 +287,6 @@ void
 A1makeTeapotScene()
 {
 	LoadedTexture *autumnHDR = new LoadedTexture(string("gfx/autumnforrest.hdr"));
-    g_camera = new Camera;
-    g_scene = new Scene;
-    g_image = new Image;
 
     g_image->resize(256, 256);
     g_scene->setEnvironment(autumnHDR);

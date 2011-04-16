@@ -4,17 +4,28 @@
 #include <vector>
 #include "Vector3.h"
 #include "Utility.h"
+#include "Object.h"
 
-class PointLight
+class PointLight : public Object
 {
 public:
     void setPosition(const Vector3& v)  {m_position = v;}
     void setColor(const Vector3& v)     {m_color = v;}
-    void setWattage(float f)            {m_wattage = f;}
+    virtual void setWattage(float f)            {m_wattage = f;}
     
     float wattage() const               {return m_wattage;}
     const Vector3 & color() const       {return m_color;}
     const Vector3& position() const     {return m_position;}
+
+    //Object boundaries and center used with bounding box creation.
+    virtual Vector3 coordsMin() const { return m_position; }
+    virtual Vector3 coordsMax() const { return m_position; }
+    virtual Vector3 center() const    { return m_position; }
+
+    virtual bool intersect(HitInfo& hit, const Ray& r, float tmin, float tmax)
+    {
+        return false;
+    }
 
 	//virtual float GetLightRatio(float objArea, const Vector3& objCenter) const
 	virtual float getLightRatio(Object * obj) const  

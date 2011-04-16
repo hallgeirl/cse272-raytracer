@@ -121,6 +121,7 @@ void Triangle::updateMinMax()
 void
 Triangle::renderGL()
 {
+#ifndef NO_GFX
     TriangleMesh::TupleI3 ti3 = m_mesh->vIndices()[m_index];
     const Vector3 & v0 = m_mesh->vertices()[ti3.v[0]]; //vertex a of triangle
     const Vector3 & v1 = m_mesh->vertices()[ti3.v[1]]; //vertex b of triangle
@@ -131,6 +132,7 @@ Triangle::renderGL()
         glVertex3f(v1.x, v1.y, v1.z);
         glVertex3f(v2.x, v2.y, v2.z);
     glEnd();
+#endif
 }
 
 bool

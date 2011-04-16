@@ -30,6 +30,7 @@ OBJS -=  parse.o lexer.o
 
 freeimage:
 	$(MAKE) -C lib/src/FreeImage
+	mkdir -p lib/lib
 	mv lib/src/FreeImage/Dist/libfreeimage.a lib/lib/libfreeimage.a
 
 $(NAME): $(OBJS) freeimage
@@ -38,5 +39,5 @@ $(NAME): $(OBJS) freeimage
 	$(ECHO) "Built $@!"
 	
 test: $(NAME)
-	./miro
+	./miro && eog *.ppm && rm *.ppm
 

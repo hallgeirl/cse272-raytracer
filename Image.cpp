@@ -26,6 +26,7 @@ Image::~Image()
 
 void Image::resize(int width, int height)
 {
+
     if (m_pixels)
         delete [] m_pixels;
     m_pixels = 0;
@@ -73,8 +74,10 @@ void Image::setPixel(int x, int y, const Pixel& p)
 
 void Image::drawScanline(int y)
 {
+    #ifndef NO_GFX
     glRasterPos2f(-1, -1 + 2*y / (float)m_height);
     glDrawPixels(m_width, 1, GL_RGB, GL_UNSIGNED_BYTE, &m_pixels[y*m_width]);
+    #endif
 }
 
 void Image::draw()

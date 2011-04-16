@@ -83,7 +83,9 @@ MiroWindow::display()
 {
     g_camera->click(g_scene, g_image); // take a snapshot of the scene
 
+#ifndef NO_GFX
     glFinish(); // flush the openGL pipeline
+#endif
 }
 
 
@@ -111,7 +113,9 @@ MiroWindow::motion(int x, int y)
     m_mouseX = x;          // new current position
     m_mouseY = y;
 
+    #ifndef NO_GFX
     glutPostRedisplay();
+    #endif
 }
 
 
@@ -164,10 +168,12 @@ MiroWindow::keyboard(unsigned char key, int x, int y)
             sprintf(str, "miro_%ld.ppm", time(0));
             if (g_camera->isOpenGL())
             {
+                #ifndef NO_GFX
                 unsigned char* buf = new unsigned char[g_image->width()*g_image->height()*3];
                 glReadPixels(0, 0, g_image->width(), g_image->height(),
                              GL_RGB, GL_UNSIGNED_BYTE, buf);
                 g_image->writePPM(str, buf, g_image->width(), g_image->height());
+                #endif
             }
             else
             {
@@ -241,7 +247,9 @@ MiroWindow::keyboard(unsigned char key, int x, int y)
         default:
         break;
     }
+#ifndef NO_GFX
     glutPostRedisplay();
+#endif
 }
 
 
@@ -249,8 +257,10 @@ void
 MiroWindow::reshape(int w, int h)
 {
     g_image->resize(w, h);
+#ifndef NO_GFX
     glViewport(0, 0, w, h);
     g_camera->setRenderer(Camera::RENDER_OPENGL);
     glutPostRedisplay();
+#endif
 }
 

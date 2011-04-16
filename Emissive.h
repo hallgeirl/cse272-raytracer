@@ -14,7 +14,7 @@ public:
 
     virtual Vector3 shade(const Ray& ray, const HitInfo& hit, const Scene& scene) const
 	{
-		return m_power/PI;
+		return m_power;
 	}
 
 	virtual void setPower(const float power) {m_power = power;}
