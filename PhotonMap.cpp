@@ -133,8 +133,8 @@ int Photon_map :: irradiance_estimate(
 
   }
 
-  const float tmp=(1.0f/M_PI)/(np.dist2[0]);	// estimate of density
-
+  //const float tmp=(1.0f/M_PI)/(np.dist2[0]);	// estimate of density
+  const float tmp = 1.f;
 
   irrad[0] *= tmp;
   irrad[1] *= tmp;

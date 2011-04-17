@@ -19,6 +19,7 @@ makeTask1Scene()
     l->setWattage(100);
 
     g_scene->addObject(l);
+	g_scene->addLight(l);
 
     // mirror
 

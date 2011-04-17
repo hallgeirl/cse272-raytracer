@@ -503,9 +503,12 @@ void Scene::ProgressivePhotonPass()
 		hp->radius *= sqrt(delta);
 		hp->accPhotons += (int)(PHOTON_ALPHA * M);
 		
-		hp->accFlux.x += irradiance[0] * PHOTON_ALPHA;
-		hp->accFlux.y += irradiance[1] * PHOTON_ALPHA;
-		hp->accFlux.z += irradiance[2] * PHOTON_ALPHA;
+		hp->accFlux.x = ( hp->accFlux.x + irradiance[0] * PHOTON_ALPHA ) * delta;
+		hp->accFlux.y = ( hp->accFlux.y + irradiance[1] * PHOTON_ALPHA ) * delta;
+		hp->accFlux.z = ( hp->accFlux.z + irradiance[2] * PHOTON_ALPHA ) * delta;
+
+		//if (m_photonsEmitted % 100000 == 0)
+			printf("radius: %f  accPhotons: %d irradiance: %f \n", hp->radius, hp->accPhotons, hp->accFlux.x / PI / pow(hp->radius, 2));
 	}
 
 	m_photonMap.empty();
