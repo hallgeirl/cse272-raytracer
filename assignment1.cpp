@@ -84,11 +84,14 @@ void a1task1()
 			//fprintf(fp, "%i %f\n", k, shadeResult[0]/((float)k+1));
 	}
 	fclose(fp);
-	shadeResult /= TRACE_SAMPLES; 
 }
 
 void a1task2()
 {
+	while (g_scene->GetPhotonsEmitted() < 10000000)
+	{
+		g_scene->traceProgressivePhotons();
+	}
 }
 
 double sampleLightSource(const Vector3& incidentDir)
@@ -123,7 +126,6 @@ void a1task3()
 			//fprintf(fp, "%i %f\n", k, shadeResult[0]/((float)k+1));
 	}
 	fclose(fp);
-	shadeResult /= TRACE_SAMPLES; 
 }
 
 void

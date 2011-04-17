@@ -78,7 +78,7 @@ void Photon_map :: photon_dir( float *dir, const Photon *p ) const
  * at a given surface position
 */
 //**********************************************
-void Photon_map :: irradiance_estimate(
+int Photon_map :: irradiance_estimate(
   float irrad[3],                // returned irradiance
   const float pos[3],            // surface position
   const float normal[3],         // surface normal at pos
@@ -142,6 +142,8 @@ void Photon_map :: irradiance_estimate(
   
 /*  #pragma omp critical
   cout << irrad[0] << "," << irrad[1] << "," << irrad[2] << " density " << tmp << " no. photons " << np.found << " radius^2 " << np.dist2[0] << endl;*/
+
+	return np.found;
 }
 
 
@@ -285,6 +287,22 @@ void Photon_map :: store(
     node->phi = (unsigned char)(phi+256);
   else
     node->phi = (unsigned char)phi;
+}
+
+/* empty the  flat array 
+ * and reset kd-tree bounds
+ *
+ * Call this function to empty the photon map.
+*/
+//***************************
+void Photon_map :: empty()
+	{
+	stored_photons = 0;
+	half_stored_photons = 0;
+	prev_scale = 1;
+
+	bbox_min[0] = bbox_min[1] = bbox_min[2] = 1e8f;
+	bbox_max[0] = bbox_max[1] = bbox_max[2] = -1e8f;
 }
 
 

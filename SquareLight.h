@@ -5,6 +5,11 @@
 #include <iostream>
 #include "TriangleMesh.h"
 #include "Triangle.h"
+#include <cmath>
+
+// Work around for windows error 
+using std::min;
+using std::max;
 
 class SquareLight : public PointLight
 {
@@ -105,8 +110,8 @@ public:
         Vector3 v1 = m_position + du*m_tangent1 + dv*m_tangent2;
         Vector3 v2 = m_position - du*m_tangent1 - dv*m_tangent2;
 
-        m_minCorner.set(std::min(v1.x, v2.x), std::min(v1.y, v2.y), std::min(v1.z, v2.z));
-        m_maxCorner.set(std::max(v1.x, v2.x), std::max(v1.y, v2.y), std::max(v1.z, v2.z));
+		m_minCorner.set(min(v1.x, v2.x), min(v1.y, v2.y), min(v1.z, v2.z));
+        m_maxCorner.set(max(v1.x, v2.x), max(v1.y, v2.y), max(v1.z, v2.z));
 
         m_mesh[0].createSingleTriangle();
         m_mesh[0].setV1(m_position + du*m_tangent1 + dv*m_tangent2);

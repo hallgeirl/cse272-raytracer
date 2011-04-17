@@ -11,11 +11,30 @@
 class Camera;
 class Image;
 
+struct HitPoint
+{
+	Vector3 position;
+	Vector3 normal;
+	Vector3 dir;
+	float brdf;
+	//int pixel_x, pixel_y;
+	//float pixel_wgt;
+	float radius;
+	int accPhotons;
+	Vector3 accFlux;
+
+	HitPoint()
+		:position(0.f), normal(0.f), dir(0.f), brdf(1.f), radius(0.f), accPhotons(0), accFlux(0.f)
+	{}
+};
+
+typedef std::vector<HitPoint*> HitPoints;
+
 class Scene
 {
 public:
 	Scene() 
-		: m_photonMap(PhotonsPerLightSource*TRACE_DEPTH*MaxLights+MaxLights*10000), m_causticMap(CausticPhotonsPerLightSource*TRACE_DEPTH*MaxLights+MaxLights*10000), m_environment(0), m_bgColor(Vector3(0.0f))
+		: m_photonMap(PhotonsPerLightSource*TRACE_DEPTH*MaxLights+MaxLights*10000), m_causticMap(CausticPhotonsPerLightSource*TRACE_DEPTH*MaxLights+MaxLights*10000), m_environment(0), m_bgColor(Vector3(0.0f)), m_photonsEmitted(0)
 	{}
     void addObject(Object* pObj)        
     { 
@@ -29,7 +48,11 @@ public:
     void addLight(PointLight* pObj)     {m_lights.push_back(pObj);}
     const Lights* lights() const        {return &m_lights;}
 
+	void addHitPoint (HitPoint* hp)		{m_hitpoints.push_back(hp);}
+	const HitPoints* hitpoints() const	{return &m_hitpoints;}
+
     void generatePhotonMap();
+    void ProgressivePhotonPass();
 
     void preCalc();
     void openGL(Camera *cam);
@@ -41,7 +64,9 @@ public:
 
     void tracePhotons();
     void traceCausticPhotons();
+    void traceProgressivePhotons();
     int tracePhoton(const Vector3& position, const Vector3& direction, const Vector3& power, int depth, bool bCausticRay=false);
+	long int GetPhotonsEmitted() { return m_photonsEmitted; }
 
 	void setEnvironment(Texture* environment) { m_environment = environment; }
 	Vector3 getEnvironmentMap(const Ray & ray);
@@ -59,13 +84,16 @@ protected:
     Photon_map m_causticMap;
     BVH m_bvh;
     Lights m_lights;
+	HitPoints m_hitpoints;
     Texture * m_environment; //Environment map
     Vector3 m_bgColor;       //Background color (for when environment map is not available)
 
     static const int MaxLights = 10;
 
-    static const int PhotonsPerLightSource = 200000;
-    static const int CausticPhotonsPerLightSource = 200000;
+    static const int PhotonsPerLightSource = 100000;
+    static const int CausticPhotonsPerLightSource = 100000;
+
+	long int m_photonsEmitted;
 };
 
 extern Scene * g_scene;

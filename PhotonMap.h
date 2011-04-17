@@ -50,12 +50,14 @@ public:
     const float pos[3],            // photon position
     const float dir[3] );          // photon direction
 
+  void empty();
+
   void scale_photon_power(
     const float scale );           // 1/(number of emitted photons)
 
   void balance(void);              // balance the kd-tree (before use!)
 
-  void irradiance_estimate(
+  int irradiance_estimate(
     float irrad[3],                // returned irradiance
     const float pos[3],            // surface position
     const float normal[3],         // surface normal at pos

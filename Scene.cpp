@@ -485,6 +485,86 @@ void Scene::traceCausticPhotons()
     #endif
 }
 
+void Scene::ProgressivePhotonPass()
+{
+	traceProgressivePhotons();
+	
+	for (int n = 0; n < m_hitpoints.size(); ++n)
+	{
+		HitPoint *hp = m_hitpoints[n];
+
+		float pos[3] = {hp->position.x, hp->position.y, hp->position.z};
+		float normal[3] = {hp->normal.x, hp->normal.y, hp->normal.z};
+		float irradiance[3] = {0,0,0};
+    
+		int M = m_photonMap.irradiance_estimate(irradiance, pos, normal, hp->radius, PHOTON_SAMPLES);
+		float delta = (hp->accPhotons + PHOTON_ALPHA * M)/(hp->accPhotons + M);
+
+		hp->radius *= sqrt(delta);
+		hp->accPhotons += (int)(PHOTON_ALPHA * M);
+		
+		hp->accFlux.x += irradiance[0] * PHOTON_ALPHA;
+		hp->accFlux.y += irradiance[1] * PHOTON_ALPHA;
+		hp->accFlux.z += irradiance[2] * PHOTON_ALPHA;
+	}
+
+	m_photonMap.empty();
+} 
+
+//Shoot out all photons and trace them
+void Scene::traceProgressivePhotons()
+{
+    if (PhotonsPerLightSource == 0) 
+    {
+        m_photonMap.balance();
+        return;
+    }
+    
+    printf("Photon Map pass \n");
+    int totalPhotons = 0; //Total photons emitted
+    int photonsAdded = 0; //Photons added to the scene
+    
+    for (int l = 0; l < m_lights.size(); l++)
+    {
+        PointLight *light = m_lights[l];
+        
+        while (photonsAdded < PhotonsPerLightSource)
+        {
+            #ifdef OPENMP
+            #pragma omp parallel for
+            #endif
+            for (int i = 0; i < 10000; i++)
+            {
+                if (photonsAdded < PhotonsPerLightSource)
+                {
+                    //Create a new photon
+                    Vector3 power = light->color() * light->wattage(); 
+                    Vector3 dir = light->samplePhotonDirection();
+                    Vector3 pos = light->samplePhotonOrigin();
+                    int photons = tracePhoton(pos, dir, power, 0);
+                    
+                    #pragma omp critical
+                    {
+                        photonsAdded += photons;
+                        totalPhotons ++;
+                    }
+                }
+            }
+        }
+
+		m_photonsEmitted += PhotonsPerLightSource;
+    }
+	// do not scale photons in progressive photon mapping
+    // m_photonMap.scale_photon_power(1.0f/(float)totalPhotons);
+    printf("Photon Map Progress: %.3f%%\n", 100.0f);
+    m_photonMap.balance();
+    #ifdef VISUALIZE_PHOTON_MAP
+    debug("Rebuilding BVH for visualization. Number of objects: %d\n", m_objects.size());
+    m_bvh.build(&m_objects);
+
+    #endif
+}
+
 //Trace a single photon through the scene
 int Scene::tracePhoton(const Vector3& position, const Vector3& direction, const Vector3& power, int depth, bool bCausticRay)
 {
