@@ -508,7 +508,7 @@ void Scene::ProgressivePhotonPass()
 		hp->accFlux.z = ( hp->accFlux.z + irradiance[2] * PHOTON_ALPHA ) * delta;
 
 		//if (m_photonsEmitted % 100000 == 0)
-			printf("radius: %f  accPhotons: %d irradiance: %f \n", hp->radius, hp->accPhotons, hp->accFlux.x / PI / pow(hp->radius, 2));
+			printf("radius: %f  accPhotons: %d irradiance z: %f \n", hp->radius, hp->accPhotons, hp->accFlux.z / PI / pow(hp->radius, 2)/hp->accPhotons);
 	}
 
 	m_photonMap.empty();
@@ -609,8 +609,8 @@ int Scene::tracePhoton(const Vector3& position, const Vector3& direction, const 
             PHOTON_DEBUG("Diffuse contribution.");
             int nPhotons = 0;
             //Diffuse.
-            //only store indirect lighting
-            if (depth > 1)
+            //only store indirect lighting -- but store direct lighting for progressive mapping
+            //if (depth > 1)
             {
                 float pos[3] = {hit.P.x, hit.P.y, hit.P.z}, dir[3] = {direction.x, direction.y, direction.z}, pwr[3] = {power.x, power.y, power.z};
 #               ifdef OPENMP
@@ -634,12 +634,12 @@ int Scene::tracePhoton(const Vector3& position, const Vector3& direction, const 
 #                   endif
                 }
             }
-            else
+            /*else
             {
 			    //Caustic Rays only send rays from specular surfaces
 			    if (bCausticRay)
 				    return 0;
-		    }
+		    }*/
 
 #ifdef STATS
 			Stats::Photon_Bounces++;

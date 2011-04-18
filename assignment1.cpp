@@ -89,9 +89,16 @@ void a1task1()
 
 void a1task2()
 {
+	HitPoint *hp = new HitPoint;
+	hp->position = Vector3(0.f);
+	hp->normal = Vector3(0, 1, 0);
+	hp->radius = 0.25f;
+
+	g_scene->addHitPoint(hp);
+
 	while (g_scene->GetPhotonsEmitted() < 10000000)
 	{
-		g_scene->traceProgressivePhotons();
+		g_scene->ProgressivePhotonPass();
 	}
 }
 

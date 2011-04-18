@@ -90,7 +90,7 @@ protected:
 
     static const int MaxLights = 10;
 
-    static const int PhotonsPerLightSource = 10000;
+    static const int PhotonsPerLightSource = 100000;
     static const int CausticPhotonsPerLightSource = 100000;
 
 	long int m_photonsEmitted;

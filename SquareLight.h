@@ -74,7 +74,8 @@ public:
         float u = (du*frand()) + sx * du - m_dimensions[0]/2.0f;
         float v = (dv*frand()) + sy * dv - m_dimensions[1]/2.0f;
 
-        return m_position + u*m_tangent1 + v*m_tangent2;
+		// Add epsilon in normal direction to prevent photons from hitting light mesh
+        return m_position + u*m_tangent1 + v*m_tangent2 + m_normal * epsilon;
     }
 
     virtual Vector3 samplePhotonDirection() const
