@@ -17,6 +17,7 @@ makeTask1Scene()
     l->setNormal(Vector3(0,-1,0));
     l->setUdir(Vector3(1,0,0));
     l->setWattage(100);
+	l->setColor(Vector3(1.f));
 
     g_scene->addObject(l);
 	g_scene->addLight(l);
@@ -96,9 +97,14 @@ void a1task2()
 
 	g_scene->addHitPoint(hp);
 
-	while (g_scene->GetPhotonsEmitted() < 10000000)
+	int iter = 0;
+
+	while (g_scene->GetPhotonsEmitted() < 100000000)
 	{
 		g_scene->ProgressivePhotonPass();
+
+		++iter;
+		printf("Iteration: %d \n", iter);
 	}
 }
 

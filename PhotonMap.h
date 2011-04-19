@@ -62,7 +62,8 @@ public:
     const float pos[3],            // surface position
     const float normal[3],         // surface normal at pos
     const float max_dist,          // max distance to look for photons
-    const int nphotons ) const;    // number of photons to use
+    const int nphotons,			   // number of photons to use
+	const bool bNormalize = true) const; // if the flux should be normalized by density    
 
   void locate_photons(
     NearestPhotons *const np,      // np is used to locate the photons

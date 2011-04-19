@@ -489,6 +489,7 @@ void Scene::ProgressivePhotonPass()
 {
 	traceProgressivePhotons();
 	
+	//iterate throuhg all of the scene hitpoints
 	for (int n = 0; n < m_hitpoints.size(); ++n)
 	{
 		HitPoint *hp = m_hitpoints[n];
@@ -497,18 +498,19 @@ void Scene::ProgressivePhotonPass()
 		float normal[3] = {hp->normal.x, hp->normal.y, hp->normal.z};
 		float irradiance[3] = {0,0,0};
     
-		int M = m_photonMap.irradiance_estimate(irradiance, pos, normal, hp->radius, PHOTON_SAMPLES);
+		int M = m_photonMap.irradiance_estimate(irradiance, pos, normal, hp->radius, PHOTON_SAMPLES, false);
+		
+		//only adding a ratio of the newly added photons
 		float delta = (hp->accPhotons + PHOTON_ALPHA * M)/(hp->accPhotons + M);
-
 		hp->radius *= sqrt(delta);
 		hp->accPhotons += (int)(PHOTON_ALPHA * M);
 		
+		//not sure about this flux acc, or about calculating the irradiance
 		hp->accFlux.x = ( hp->accFlux.x + irradiance[0] * PHOTON_ALPHA ) * delta;
 		hp->accFlux.y = ( hp->accFlux.y + irradiance[1] * PHOTON_ALPHA ) * delta;
 		hp->accFlux.z = ( hp->accFlux.z + irradiance[2] * PHOTON_ALPHA ) * delta;
 
-		//if (m_photonsEmitted % 100000 == 0)
-			printf("radius: %f  accPhotons: %d irradiance z: %f \n", hp->radius, hp->accPhotons, hp->accFlux.z / PI / pow(hp->radius, 2)/hp->accPhotons);
+		printf("radius: %f  accPhotons: %d irradiance x: %f ", hp->radius, hp->accPhotons, hp->accFlux.x / PI / pow(hp->radius, 2) / m_photonsEmitted);
 	}
 
 	m_photonMap.empty();
@@ -523,7 +525,6 @@ void Scene::traceProgressivePhotons()
         return;
     }
     
-    printf("Photon Map pass \n");
     int totalPhotons = 0; //Total photons emitted
     int photonsAdded = 0; //Photons added to the scene
     
@@ -559,7 +560,6 @@ void Scene::traceProgressivePhotons()
     }
 	// do not scale photons in progressive photon mapping
     // m_photonMap.scale_photon_power(1.0f/(float)totalPhotons);
-    printf("Photon Map Progress: %.3f%%\n", 100.0f);
     m_photonMap.balance();
     #ifdef VISUALIZE_PHOTON_MAP
     debug("Rebuilding BVH for visualization. Number of objects: %d\n", m_objects.size());

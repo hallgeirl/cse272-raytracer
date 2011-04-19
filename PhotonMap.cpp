@@ -83,7 +83,8 @@ int Photon_map :: irradiance_estimate(
   const float pos[3],            // surface position
   const float normal[3],         // surface normal at pos
   const float max_dist,          // max distance to look for photons
-  const int nphotons ) const     // number of photons to use
+  const int nphotons, 
+  const bool bNormalize) const     // number of photons to use
 //**********************************************
 {
   irrad[0] = irrad[1] = irrad[2] = 0.0;
@@ -133,9 +134,8 @@ int Photon_map :: irradiance_estimate(
 
   }
 
-  //const float tmp=(1.0f/M_PI)/(np.dist2[0]);	// estimate of density
-  const float tmp = 1.f;
-
+  const float tmp=  bNormalize ? (1.0f/M_PI)/(np.dist2[0]) : 1.f;	// estimate of density
+  
   irrad[0] *= tmp;
   irrad[1] *= tmp;
   irrad[2] *= tmp;
@@ -332,7 +332,7 @@ void Photon_map :: scale_photon_power( const float scale )
 void Photon_map :: balance(void)
 //******************************
 {
-  cout << "Balancing tree. Stored photons " << stored_photons << endl;
+//  cout << "Balancing tree. Stored photons " << stored_photons << endl;
   if (stored_photons>1) {
     // allocate two temporary arrays for the balancing procedure
     Photon **pa1 = (Photon**)malloc(sizeof(Photon*)*(stored_photons+1));
