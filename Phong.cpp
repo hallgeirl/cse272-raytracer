@@ -153,7 +153,7 @@ Phong::shade(const Ray &ray, const HitInfo &hit, const Scene &scene) const
                 float eDotr = pow(std::max(0.0f, std::min(1.f, dot(-ray.d, r))), 500);
                 
                 float highlights = std::max(0.0f, eDotr*falloff * pLight->wattage()/(float)samples);
-                L += highlights;
+                //L += highlights;
             }
         }
     }

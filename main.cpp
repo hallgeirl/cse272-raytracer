@@ -57,7 +57,7 @@ main(int argc, char*argv[])
 
     cout << "Alternative tasks" << endl;
 	makeTask1Scene();
-    a1task1();
+    a1task3();
 #endif
 
 	FreeImage_DeInitialise();

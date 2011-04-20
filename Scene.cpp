@@ -297,6 +297,7 @@ bool Scene::traceScene(const Ray& ray, Vector3& shadeResult, int depth)
 				if (traceScene(diffuseRay, diffuseResult, depth))
 				{
 					shadeResult += (hitInfo.material->getDiffuse() * diffuseResult);
+
 				}
 #endif
 
@@ -352,8 +353,12 @@ bool Scene::traceScene(const Ray& ray, Vector3& shadeResult, int depth)
 		}
 		else
 		{
-            shadeResult = getEnvironmentMap(ray);
-            hit = true;
+            if (m_environment != 0)
+            {
+                shadeResult = getEnvironmentMap(ray);
+                hit = true;
+            }
+            else hit = false;
 		}
 	}
     

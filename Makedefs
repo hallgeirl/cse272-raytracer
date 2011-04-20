@@ -14,7 +14,7 @@ ifndef nogfx
 	LIBS += -lGL -lGLU -lglut 
 endif
 LDFLAGS		= $(LIBDIRS) $(LIBS) -fopenmp
-CXXFLAGS          += $(INCDIRS) -O1 -DOPENMP -fomit-frame-pointer -fopenmp -lopenmp -g \
+CXXFLAGS          += $(INCDIRS) -O3 -DOPENMP -fomit-frame-pointer -fopenmp -lopenmp -g \
 -Wno-deprecated -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_GNU_SOURCE
 # -msse4.1
 

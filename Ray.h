@@ -118,6 +118,8 @@ class Ray
             Ray random = alignToVector(hitInfo.N, hitInfo.P, theta, phi);
             random.isDiffuse = true;
 
+            random.o += random.d*epsilon;
+
             return random;
         }
 

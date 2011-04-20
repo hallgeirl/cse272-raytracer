@@ -17,6 +17,8 @@ public:
     const Vector3 & color() const       {return m_color;}
     const Vector3& position() const     {return m_position;}
 
+    float radiance(const Vector3& x, const Vector3& incdir) const { return wattage()/(4.*PI); } 
+
     //Object boundaries and center used with bounding box creation.
     virtual Vector3 coordsMin() const { return m_position; }
     virtual Vector3 coordsMax() const { return m_position; }
