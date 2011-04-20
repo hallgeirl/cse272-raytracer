@@ -13,8 +13,8 @@ public:
 
     virtual void setWattage(float f) 
     {
-        ((Emissive*)m_material)->setPower(f/(m_dimensions[0]*m_dimensions[1])); 
-        m_wattage = f; 
+        m_wattage = f; //Divide by PI for diffuse light sources
+        ((Emissive*)m_material)->setPower(f/(PI*m_dimensions[0]*m_dimensions[1])); 
     }
 
     virtual Vector3 coordsMin() const { return m_minCorner; }
@@ -22,6 +22,8 @@ public:
     virtual Vector3 coordsMax() const { return m_maxCorner; }
 
     virtual Vector3 center() const    { return m_position;  }
+
+    float radiance(const Vector3& x, const Vector3& incdir) const { return m_wattage / (PI*m_dimensions[0]*m_dimensions[1]); } 
 
     void setNormal(Vector3 n) 
     { 
@@ -52,6 +54,7 @@ public:
     }
 
     void setDimensions(float width, float height) { m_dimensions[0] = width; m_dimensions[1] = height; }
+    float area() { return m_dimensions[0] * m_dimensions[1]; }
     void setUdir(const Vector3& udir) { m_tangent1 = udir; hasTangent1 = true; }
 
     virtual Vector3 samplePhotonOrigin(int sampleNumber = 0, int totalSamples = 1) const  
