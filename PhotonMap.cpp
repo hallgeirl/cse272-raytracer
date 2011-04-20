@@ -78,12 +78,13 @@ void Photon_map :: photon_dir( float *dir, const Photon *p ) const
  * at a given surface position
 */
 //**********************************************
-void Photon_map :: irradiance_estimate(
+int Photon_map :: irradiance_estimate(
   float irrad[3],                // returned irradiance
   const float pos[3],            // surface position
   const float normal[3],         // surface normal at pos
   const float max_dist,          // max distance to look for photons
-  const int nphotons ) const     // number of photons to use
+  const int nphotons, 
+  const bool bNormalize) const     // number of photons to use
 //**********************************************
 {
   irrad[0] = irrad[1] = irrad[2] = 0.0;
@@ -133,15 +134,16 @@ void Photon_map :: irradiance_estimate(
 
   }
 
-  const float tmp=(1.0f/M_PI)/(np.dist2[0]);	// estimate of density
-
-
+  const float tmp=  bNormalize ? (1.0f/M_PI)/(np.dist2[0]) : 1.f;	// estimate of density
+  
   irrad[0] *= tmp;
   irrad[1] *= tmp;
   irrad[2] *= tmp;
   
 /*  #pragma omp critical
   cout << irrad[0] << "," << irrad[1] << "," << irrad[2] << " density " << tmp << " no. photons " << np.found << " radius^2 " << np.dist2[0] << endl;*/
+
+	return np.found;
 }
 
 
@@ -287,6 +289,22 @@ void Photon_map :: store(
     node->phi = (unsigned char)phi;
 }
 
+/* empty the  flat array 
+ * and reset kd-tree bounds
+ *
+ * Call this function to empty the photon map.
+*/
+//***************************
+void Photon_map :: empty()
+	{
+	stored_photons = 0;
+	half_stored_photons = 0;
+	prev_scale = 1;
+
+	bbox_min[0] = bbox_min[1] = bbox_min[2] = 1e8f;
+	bbox_max[0] = bbox_max[1] = bbox_max[2] = -1e8f;
+}
+
 
 /* scale_photon_power is used to scale the power of all
  * photons once they have been emitted from the light
@@ -314,7 +332,7 @@ void Photon_map :: scale_photon_power( const float scale )
 void Photon_map :: balance(void)
 //******************************
 {
-  cout << "Balancing tree. Stored photons " << stored_photons << endl;
+//  cout << "Balancing tree. Stored photons " << stored_photons << endl;
   if (stored_photons>1) {
     // allocate two temporary arrays for the balancing procedure
     Photon **pa1 = (Photon**)malloc(sizeof(Photon*)*(stored_photons+1));

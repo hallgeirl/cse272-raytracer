@@ -485,6 +485,89 @@ void Scene::traceCausticPhotons()
     #endif
 }
 
+void Scene::ProgressivePhotonPass()
+{
+	traceProgressivePhotons();
+	
+	//iterate throuhg all of the scene hitpoints
+	for (int n = 0; n < m_hitpoints.size(); ++n)
+	{
+		HitPoint *hp = m_hitpoints[n];
+
+		float pos[3] = {hp->position.x, hp->position.y, hp->position.z};
+		float normal[3] = {hp->normal.x, hp->normal.y, hp->normal.z};
+		float irradiance[3] = {0,0,0};
+    
+		int M = m_photonMap.irradiance_estimate(irradiance, pos, normal, hp->radius, PHOTON_SAMPLES, false);
+		
+		//only adding a ratio of the newly added photons
+		float delta = (hp->accPhotons + PHOTON_ALPHA * M)/(hp->accPhotons + M);
+		hp->radius *= sqrt(delta);
+		hp->accPhotons += (int)(PHOTON_ALPHA * M);
+		
+		//not sure about this flux acc, or about calculating the irradiance
+		hp->accFlux.x = ( hp->accFlux.x + irradiance[0] * PHOTON_ALPHA ) * delta;
+		hp->accFlux.y = ( hp->accFlux.y + irradiance[1] * PHOTON_ALPHA ) * delta;
+		hp->accFlux.z = ( hp->accFlux.z + irradiance[2] * PHOTON_ALPHA ) * delta;
+
+		printf("radius: %f  accPhotons: %d irradiance x: %f ", hp->radius, hp->accPhotons, hp->accFlux.x / PI / pow(hp->radius, 2) / m_photonsEmitted);
+	}
+
+	m_photonMap.empty();
+} 
+
+//Shoot out all photons and trace them
+void Scene::traceProgressivePhotons()
+{
+    if (PhotonsPerLightSource == 0) 
+    {
+        m_photonMap.balance();
+        return;
+    }
+    
+    int totalPhotons = 0; //Total photons emitted
+    int photonsAdded = 0; //Photons added to the scene
+    
+    for (int l = 0; l < m_lights.size(); l++)
+    {
+        PointLight *light = m_lights[l];
+        
+        while (photonsAdded < PhotonsPerLightSource)
+        {
+            #ifdef OPENMP
+            #pragma omp parallel for
+            #endif
+            for (int i = 0; i < 10000; i++)
+            {
+                if (photonsAdded < PhotonsPerLightSource)
+                {
+                    //Create a new photon
+                    Vector3 power = light->color() * light->wattage(); 
+                    Vector3 dir = light->samplePhotonDirection();
+                    Vector3 pos = light->samplePhotonOrigin();
+                    int photons = tracePhoton(pos, dir, power, 0);
+                    
+                    #pragma omp critical
+                    {
+                        photonsAdded += photons;
+                        totalPhotons ++;
+                    }
+                }
+            }
+        }
+
+		m_photonsEmitted += PhotonsPerLightSource;
+    }
+	// do not scale photons in progressive photon mapping
+    // m_photonMap.scale_photon_power(1.0f/(float)totalPhotons);
+    m_photonMap.balance();
+    #ifdef VISUALIZE_PHOTON_MAP
+    debug("Rebuilding BVH for visualization. Number of objects: %d\n", m_objects.size());
+    m_bvh.build(&m_objects);
+
+    #endif
+}
+
 //Trace a single photon through the scene
 int Scene::tracePhoton(const Vector3& position, const Vector3& direction, const Vector3& power, int depth, bool bCausticRay)
 {
@@ -526,8 +609,8 @@ int Scene::tracePhoton(const Vector3& position, const Vector3& direction, const 
             PHOTON_DEBUG("Diffuse contribution.");
             int nPhotons = 0;
             //Diffuse.
-            //only store indirect lighting
-            if (depth > 1)
+            //only store indirect lighting -- but store direct lighting for progressive mapping
+            //if (depth > 1)
             {
                 float pos[3] = {hit.P.x, hit.P.y, hit.P.z}, dir[3] = {direction.x, direction.y, direction.z}, pwr[3] = {power.x, power.y, power.z};
 #               ifdef OPENMP
@@ -551,12 +634,12 @@ int Scene::tracePhoton(const Vector3& position, const Vector3& direction, const 
 #                   endif
                 }
             }
-            else
+            /*else
             {
 			    //Caustic Rays only send rays from specular surfaces
 			    if (bCausticRay)
 				    return 0;
-		    }
+		    }*/
 
 #ifdef STATS
 			Stats::Photon_Bounces++;

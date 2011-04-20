@@ -25,7 +25,7 @@ public:
 
 	Vector3         getReflection() const       {return Vector3(0);}
 	Vector3         getRefraction() const       {return Vector3(0);}
-	virtual Vector3 getDiffuse() const          {return Vector3(1.f);}
+	virtual Vector3 getDiffuse() const          {return Vector3(0);}
 
 private:
 	float m_power;

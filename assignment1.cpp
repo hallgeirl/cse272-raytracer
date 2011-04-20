@@ -82,8 +82,10 @@ makeTask1Scene()
     l->setNormal(Vector3(0,-1,0));
     l->setUdir(Vector3(1,0,0));
     l->setWattage(100);
+	l->setColor(Vector3(1.f));
 
     g_scene->addObject(l);
+	g_scene->addLight(l);
 
     // mirror
 
@@ -158,6 +160,22 @@ void a1task1()
 
 void a1task2()
 {
+	HitPoint *hp = new HitPoint;
+	hp->position = Vector3(0.f);
+	hp->normal = Vector3(0, 1, 0);
+	hp->radius = 0.25f;
+
+	g_scene->addHitPoint(hp);
+
+	int iter = 0;
+
+	while (g_scene->GetPhotonsEmitted() < 100000000)
+	{
+		g_scene->ProgressivePhotonPass();
+
+		++iter;
+		printf("Iteration: %d \n", iter);
+	}
 }
 
 sample sampleLightSource()
