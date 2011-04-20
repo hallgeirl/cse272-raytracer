@@ -1,17 +1,82 @@
 #include "assignment1.h"
+#include <fstream>
+#include <iostream>
 #include <math.h>
 #include <stdio.h>
+#include <map>
 #include "Miro.h"
 #include "includes.h"
 #include "Emissive.h"
 
+SquareLight* g_l;
+
 using namespace std;
+
+struct sample
+{
+    double value, dist2, costheta;
+    bool hit;
+    bool direct;
+};
+
+typedef map<long, sample> sample_map;
+
+struct samples
+{
+    sample_map X;
+    double p;
+    long n;
+    bool isAreaSample;
+
+    samples() { n = 0; }
+};
+
+sample samplePath()
+{
+    sample out;
+    out.direct = true;
+    HitInfo hitInfo(0, Vector3(0, epsilon, 0), Vector3(0,1,0));
+
+    //Path trace
+    Ray ray = ray.diffuse(hitInfo);
+    while (true)
+    {
+        if (g_scene->trace(hitInfo, ray, 0, MIRO_TMAX))
+        {
+            //hit diffuse surface->we're done
+            if (!hitInfo.material->isReflective())
+            {
+                double contrib = hitInfo.material->shade(ray, hitInfo, *g_scene)[0];
+                out.value = contrib; //=25/PI=radiance
+                out.costheta = dot(hitInfo.N, ray.d);
+                out.dist2 = hitInfo.P.length2(); //x'-x = x'
+                out.hit = true;
+
+                break;
+            }
+            else 
+            {
+                ray = ray.reflect(hitInfo);
+                out.direct = false;
+            }
+        }
+        else 
+        {
+            out.hit = false;
+            break;
+        }
+    }
+    return out;
+}
 
 void 
 makeTask1Scene()
 {
+    Material* m;
+
     //real squarelight
     SquareLight *l = new SquareLight;
+    g_l = l;
     l->setDimensions(2,2);
     l->setPosition(Vector3(0,10,0));
     l->setNormal(Vector3(0,-1,0));
@@ -53,7 +118,7 @@ makeTask1Scene()
     //g_scene->addObject(t2);
 
 	Plane* p = new Plane();
-	p->setMaterial(new Phong());
+	p->setMaterial(m=new Phong());
 	g_scene->addObject(p);
 
     g_scene->preCalc();
@@ -61,46 +126,6 @@ makeTask1Scene()
 
 void a1task1()
 {
-	HitInfo hitInfo(0, Vector3(0, epsilon, 0), Vector3(0,1,0));
-	Vector3 shadeResult(0);
-
-	FILE *fp = stdout;
-
-//	fp = fopen("irrad_pathtracing.dat", "w");
-    long double res = 0.;
-    for (long k = 0; k < 10000000; ++k)
-	{
-        Ray ray = ray.diffuse(hitInfo);
-		Vector3 tempShadeResult;
-		if (g_scene->traceScene(ray, tempShadeResult, 0))
-		{
-    //        cout << tempShadeResult[0] << endl;
-            res += (long double)tempShadeResult[0];
-		}
-
-		if (k % 10 == 0 )
-			fprintf(fp, "%ld %2.30lf\n", k, (double)(res/((long double)k+1.)));
-			//fprintf(fp, "%i %3.30lf\n", k, (double)(res/((long double)k+1.)));
-			//fprintf(fp, "%i %f\n", k, shadeResult[0]/((float)k+1));
-	}
-	fclose(fp);
-	shadeResult /= TRACE_SAMPLES; 
-}
-
-void a1task2()
-{
-}
-
-double sampleLightSource(const Vector3& incidentDir)
-{
-/*    Vector3 
-    return 100*dot(incidentDir, Vector3(0, 1, 0))/(incidentDir-);*/
-    return 0;
-}
-
-void a1task3()
-{
-    
 	HitInfo hitInfo(0, Vector3(0, epsilon, 0), Vector3(0,1,0));
 	Vector3 shadeResult(0);
 
@@ -117,13 +142,138 @@ void a1task3()
             res += (long double)tempShadeResult[0];
 		}
 
+        //Division by 1/PI (or multiplying by PI) is neccesary because
+        //E(f/p)=F=1/n*sum(f/p) and p=1/PI (distribution of rays)
 		if (k % 10 == 0 )
-			fprintf(fp, "%ld %2.30lf\n", k, (double)(res/((long double)k+1.)));
+			fprintf(fp, "%ld %2.30lf\n", k, PI*(double)(res/((long double)k+1.)));
+        if (k % 1000 == 0)
+            printf("%ld %2.30lf\n", k, PI*(double)(res/((long double)k+1.)));
+
+
 			//fprintf(fp, "%i %3.30lf\n", k, (double)(res/((long double)k+1.)));
 			//fprintf(fp, "%i %f\n", k, shadeResult[0]/((float)k+1));
 	}
 	fclose(fp);
-	shadeResult /= TRACE_SAMPLES; 
+}
+
+void a1task2()
+{
+}
+
+sample sampleLightSource()
+{
+    Vector3 lightPos = g_l->samplePhotonOrigin();
+
+    //origin is (0,0,0)
+    Vector3 l = lightPos;
+    l.normalize();
+
+    double cos_theta = dot(l, Vector3(0, 1, 0));
+    
+    sample out;
+    out.costheta = cos_theta;
+    out.dist2 = lightPos.length2();
+
+    out.value = g_l->radiance(lightPos, l) * cos_theta*cos_theta/out.dist2;
+    out.direct = true;
+
+    return out;
+}
+
+//Evaluate the multi sample estimator using the balance heuristic
+double balanceHeuristic(vector<samples> s)
+{
+    sample_map::iterator it;
+
+    long N = 0;
+    for (int i = 0; i < s.size(); i++)
+        N += s[i].n;
+
+    vector<double> c;
+
+    for (int i = 0; i < s.size(); i++)
+        c.push_back((double)s[i].n/(double)N);
+
+    double res = 0;
+    for (size_t i = 0; i < s.size(); i++)
+    {
+        /*if (i == 0) continue; //ignore contributions from direct sampling
+        if (i == 1) continue; //ignore contributions from path tracing sampling*/
+
+        for (it = s[i].X.begin(); it != s[i].X.end(); it++)
+        {
+            sample X = it->second;
+            double p = 0;
+
+            for (int k = 0; k < s.size(); k++)
+            {
+                if (s[k].isAreaSample)
+                {
+                    //No conversion needed
+                    p += s[k].p * c[k];
+                }
+                else
+                {
+                    //convert to area probability 
+                    p += (1./PI)*X.costheta * X.costheta  * c[k] / X.dist2;
+                }
+            }
+            res += X.value / p;
+        }
+    }
+
+    return res/(double)N;
+}
+
+void a1task3()
+{
+	Vector3 shadeResult(0);
+
+    ofstream fp("irrad_importance.dat");
+
+    vector<samples> allsamples;
+    allsamples.push_back(samples());
+    allsamples.push_back(samples());
+
+    samples& directSamples = allsamples[0],
+           & pathTraceSamples = allsamples[1];
+
+    //we take direct samples of the light source distributed over the area
+    directSamples.p = 1./4;
+    directSamples.isAreaSample = true;
+
+    //path trace samples are taken using diffuse rays, that is, with a distribution of 1/PI
+    pathTraceSamples.p = 1./PI;
+    pathTraceSamples.isAreaSample = false;
+
+    //Take samples
+
+    double indirect = 0;
+
+    for (long k = 0; k < 10000000; ++k)
+	{
+		if (k % 1000 == 0 && k > 0)
+        {
+            double bh = balanceHeuristic(allsamples);
+            fp << k << " " << bh << "\n";
+            cout << k << " " << bh << endl;
+        }
+
+        sample s = samplePath();
+
+        //we only want to importance sample the direct lighting
+        if (s.hit && s.direct)
+            pathTraceSamples.X[k] = s;
+        else if (s.hit)
+            indirect += s.value;
+
+        pathTraceSamples.n++;
+
+        //Sample light source
+        directSamples.X[k] = sampleLightSource();
+        directSamples.n++;
+	}
+    fp.close();
 }
 
 void
