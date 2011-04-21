@@ -511,9 +511,9 @@ void Scene::ProgressivePhotonPass()
 		hp->accPhotons += (int)(PHOTON_ALPHA * M);
 		
 		//not sure about this flux acc, or about calculating the irradiance
-		hp->accFlux.x = ( hp->accFlux.x + irradiance[0] * PHOTON_ALPHA ) * delta;
-		hp->accFlux.y = ( hp->accFlux.y + irradiance[1] * PHOTON_ALPHA ) * delta;
-		hp->accFlux.z = ( hp->accFlux.z + irradiance[2] * PHOTON_ALPHA ) * delta;
+		hp->accFlux.x = ( hp->accFlux.x + irradiance[0] ) * delta;
+		hp->accFlux.y = ( hp->accFlux.y + irradiance[1] ) * delta;
+		hp->accFlux.z = ( hp->accFlux.z + irradiance[2] ) * delta;
 
 		printf("radius: %f  accPhotons: %d irradiance x: %f ", hp->radius, hp->accPhotons, hp->accFlux.x / PI / pow(hp->radius, 2) / m_photonsEmitted);
 	}
