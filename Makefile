@@ -33,7 +33,7 @@ freeimage:
 	mkdir -p lib/lib
 	mv lib/src/FreeImage/Dist/libfreeimage.a lib/lib/libfreeimage.a
 
-$(NAME): $(OBJS) freeimage
+$(NAME): $(OBJS)
 	$(ECHO) "Linking $@..."
 	$(CXX) -o $@ $(OBJS) $(LDFLAGS)
 	$(ECHO) "Built $@!"

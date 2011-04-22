@@ -20,6 +20,8 @@ struct sample
     double value, dist2, costheta;
     bool hit;
     bool direct;
+    int nrays;
+    sample() { nrays = 0; } 
 };
 
 typedef map<long, sample> sample_map;
@@ -42,6 +44,7 @@ sample samplePath()
 
     //Path trace
     Ray ray = ray.diffuse(hitInfo);
+    out.nrays++;
     while (true)
     {
         if (g_scene->trace(hitInfo, ray, 0, MIRO_TMAX))
@@ -61,6 +64,7 @@ sample samplePath()
             {
                 ray = ray.reflect(hitInfo);
                 out.direct = false;
+                out.nrays++;
             }
         }
         else 
@@ -137,25 +141,29 @@ void a1task1()
 
 	fp = fopen("irrad_pathtracing.dat", "w");
     long double res = 0.;
+    long nrays = 0;
     for (long k = 0; k < 10000000; ++k)
 	{
-        Ray ray = ray.diffuse(hitInfo);
+        sample s = samplePath();
+        if (s.hit)
+            res += s.value;
+        nrays += s.nrays;
+
+        /*Ray ray = ray.diffuse(hitInfo);
 		Vector3 tempShadeResult;
 		if (g_scene->traceScene(ray, tempShadeResult, 10))
 		{
             res += (long double)tempShadeResult[0];
-		}
+		}*/
 
         //Division by 1/PI (or multiplying by PI) is neccesary because
         //E(f/p)=F=1/n*sum(f/p) and p=1/PI (distribution of rays)
 		if (k % 10 == 0 )
 			fprintf(fp, "%ld %2.30lf\n", k, PI*(double)(res/((long double)k+1.)));
         if (k % 1000 == 0)
-            printf("%ld %2.30lf\n", k, PI*(double)(res/((long double)k+1.)));
-
-
-			//fprintf(fp, "%i %3.30lf\n", k, (double)(res/((long double)k+1.)));
-			//fprintf(fp, "%i %f\n", k, shadeResult[0]/((float)k+1));
+        {
+            printf("%ld %2.30lf\n",  nrays, PI*(double)(res/((long double)k+1.)));
+        }
 	}
 	fclose(fp);
 }
@@ -198,6 +206,7 @@ sample sampleLightSource()
 
     out.value = g_l->radiance(lightPos, l) * cos_theta*cos_theta/out.dist2;
     out.direct = true;
+    out.nrays ++;
 
     return out;
 }
@@ -276,17 +285,20 @@ void a1task3()
 
     //Take samples
     double indirect = 0;
+    long nrays = 0;
 
-    for (long k = 0; k < 1000000; ++k)
+
+    for (long k = 0; nrays < 1300000; ++k)
 	{
-		if (k % 1000 == 0 && k > 0)
+		if (k % 1000 == 0)
         {
             double bh = balanceHeuristic(allsamples) + indirect/(k+1);
-            fp << k << " " << bh << "\n";
-            cout << k << " " << bh << endl;
+            cout << nrays << " " << bh << endl;
+            fp << nrays << " " << bh << "\n";
         }
 
         sample s = samplePath();
+        nrays += s.nrays;
 
         //we only want to importance sample the direct lighting
         if (s.hit && s.direct)
@@ -299,6 +311,7 @@ void a1task3()
         //Sample light source
         directSamples.X[k] = sampleLightSource();
         directSamples.n++;
+        nrays += directSamples.X[k].nrays;
 	}
     fp.close();
 }
