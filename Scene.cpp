@@ -551,6 +551,11 @@ void Scene::traceProgressivePhotons()
                     Vector3 dir = light->samplePhotonDirection();
                     Vector3 pos = light->samplePhotonOrigin();
                     int photons = tracePhoton(pos, dir, power, 0);
+                    #pragma omp critical
+                    {
+                        if (photons != 0 && photons != 1)
+                            cout << photons << endl;
+                    }
                     
                     #pragma omp critical
                     {
