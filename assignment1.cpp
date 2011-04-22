@@ -104,7 +104,7 @@ makeTask1Scene()
     t->setIndex(0);
     t->setMesh(mirror);
     t->setMaterial(new Phong(Vector3(0), Vector3(1))); 
-    g_scene->addObject(t);
+    //g_scene->addObject(t);
 
 	TriangleMesh * mirror2 = new TriangleMesh;
     mirror2->createSingleTriangle();
@@ -119,7 +119,7 @@ makeTask1Scene()
     t2->setIndex(0);
     t2->setMesh(mirror2);
     t2->setMaterial(new Phong(Vector3(0), Vector3(1))); 
-    g_scene->addObject(t2);
+    //g_scene->addObject(t2);
 
 	Plane* p = new Plane();
 	p->setMaterial(m=new Phong());
@@ -165,7 +165,7 @@ void a1task2()
 	HitPoint *hp = new HitPoint;
 	hp->position = Vector3(0.f);
 	hp->normal = Vector3(0, 1, 0);
-	hp->radius = 0.25f;
+	hp->radius = 0.5f;
 
 	g_scene->addHitPoint(hp);
 
