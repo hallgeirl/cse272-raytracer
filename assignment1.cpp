@@ -177,15 +177,17 @@ void a1task2()
 
 	g_scene->addHitPoint(hp);
 
-	int iter = 0;
+	FILE *fp;
+	fp = fopen("irrad_progphotonmapping.dat", "w");
 
 	while (g_scene->GetPhotonsEmitted() < 100000000)
 	{
 		g_scene->ProgressivePhotonPass();
 
-		++iter;
-		printf("Iteration: %d \n", iter);
+		fprintf(fp, "%d %f %f %d ", g_scene->GetPhotonsEmitted(), hp->accFlux / PI / pow(hp->radius, 2) / g_scene->GetPhotonsEmitted(), hp->radius, hp->accPhotons);
 	}
+	fclose(fp);
+
 }
 
 sample sampleLightSource()

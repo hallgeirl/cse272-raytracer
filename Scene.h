@@ -21,7 +21,7 @@ struct HitPoint
 	//float pixel_wgt;
 	float radius;
 	int accPhotons;
-	Vector3 accFlux;
+	long double accFlux;
 
 	HitPoint()
 		:position(0.f), normal(0.f), dir(0.f), brdf(1.f), radius(0.f), accPhotons(0), accFlux(0.f)

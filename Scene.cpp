@@ -511,11 +511,7 @@ void Scene::ProgressivePhotonPass()
 		hp->accPhotons += (int)(PHOTON_ALPHA * M);
 		
 		//not sure about this flux acc, or about calculating the irradiance
-		hp->accFlux.x = ( hp->accFlux.x + irradiance[0] ) * delta;
-		hp->accFlux.y = ( hp->accFlux.y + irradiance[1] ) * delta;
-		hp->accFlux.z = ( hp->accFlux.z + irradiance[2] ) * delta;
-
-		printf("radius: %f  accPhotons: %d irradiance x: %f ", hp->radius, hp->accPhotons, hp->accFlux.x / PI / pow(hp->radius, 2) / m_photonsEmitted);
+		hp->accFlux = ( hp->accFlux + irradiance[0] ) * delta;	
 	}
 
 	m_photonMap.empty();
@@ -530,40 +526,23 @@ void Scene::traceProgressivePhotons()
         return;
     }
     
-    int totalPhotons = 0; //Total photons emitted
     int photonsAdded = 0; //Photons added to the scene
     
     for (int l = 0; l < m_lights.size(); l++)
     {
         PointLight *light = m_lights[l];
-        
-        while (photonsAdded < PhotonsPerLightSource)
+    
+        #ifdef OPENMP
+        #pragma omp parallel for
+        #endif
+        for (int i = 0; i < PhotonsPerLightSource; i++)
         {
-            #ifdef OPENMP
-            #pragma omp parallel for
-            #endif
-            for (int i = 0; i < 10000; i++)
-            {
-                if (photonsAdded < PhotonsPerLightSource)
-                {
-                    //Create a new photon
-                    Vector3 power = light->color() * light->wattage(); 
-                    Vector3 dir = light->samplePhotonDirection();
-                    Vector3 pos = light->samplePhotonOrigin();
-                    int photons = tracePhoton(pos, dir, power, 0);
-                    #pragma omp critical
-                    {
-                        if (photons != 0 && photons != 1)
-                            cout << photons << endl;
-                    }
-                    
-                    #pragma omp critical
-                    {
-                        photonsAdded += photons;
-                        totalPhotons ++;
-                    }
-                }
-            }
+            //Create a new photon
+            Vector3 power = light->color() * light->wattage(); 
+            Vector3 dir = light->samplePhotonDirection();
+            Vector3 pos = light->samplePhotonOrigin();
+			//printf("squarelight photon position: %f %f %f and direction %f %f %f \n", pos.x, pos.y, pos.z, dir.x, dir.y, dir.z);
+            tracePhoton(pos, dir, power, 0);
         }
 
 		m_photonsEmitted += PhotonsPerLightSource;
@@ -663,8 +642,8 @@ int Scene::tracePhoton(const Vector3& position, const Vector3& direction, const 
         else if (rnd < prob[1])
         {
 			//only caustics should count this first bounce
-			if (!bCausticRay && depth == 1)
-				return 0;
+			//if (!bCausticRay && depth == 1)
+				//return 0;
 
 #ifdef STATS
 			Stats::Photon_Bounces++;
@@ -677,8 +656,8 @@ int Scene::tracePhoton(const Vector3& position, const Vector3& direction, const 
         else if (rnd < prob[2])
         {
 			//only caustics should count this first bounce
-			if (!bCausticRay && depth == 1)
-				return 0;
+			//if (!bCausticRay && depth == 1)
+			//	return 0;
 
 #ifdef STATS
 			Stats::Photon_Bounces++;
