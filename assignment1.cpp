@@ -176,7 +176,7 @@ void a1task2()
 	{
 		g_scene->ProgressivePhotonPass();
 
-		fprintf(fp, "%d %f %f %d ", g_scene->GetPhotonsEmitted(), hp->accFlux / PI / pow(hp->radius, 2) / g_scene->GetPhotonsEmitted(), hp->radius, hp->accPhotons);
+		fprintf(fp, "%d %f %f %d \n", g_scene->GetPhotonsEmitted(), hp->accFlux / PI / pow(hp->radius, 2) / g_scene->GetPhotonsEmitted(), hp->radius, hp->accPhotons);
 	}
 	fclose(fp);
 
