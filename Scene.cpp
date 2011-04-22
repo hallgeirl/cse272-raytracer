@@ -511,9 +511,7 @@ void Scene::ProgressivePhotonPass()
 		hp->accPhotons += (int)(PHOTON_ALPHA * M);
 		
 		//not sure about this flux acc, or about calculating the irradiance
-		hp->accFlux = ( hp->accFlux + irradiance[0] ) * delta;
-		
-		printf("radius: %f  accPhotons: %d irradiance: %f ", hp->radius, hp->accPhotons, hp->accFlux / PI / pow(hp->radius, 2) / m_photonsEmitted);
+		hp->accFlux = ( hp->accFlux + irradiance[0] ) * delta;	
 	}
 
 	m_photonMap.empty();
@@ -544,11 +542,10 @@ void Scene::traceProgressivePhotons()
             Vector3 dir = light->samplePhotonDirection();
             Vector3 pos = light->samplePhotonOrigin();
 			//printf("squarelight photon position: %f %f %f and direction %f %f %f \n", pos.x, pos.y, pos.z, dir.x, dir.y, dir.z);
-            if (tracePhoton(pos, dir, power, 0) > 0)
-				++photonsAdded;
+            tracePhoton(pos, dir, power, 0);
         }
 
-		m_photonsEmitted += photonsAdded;
+		m_photonsEmitted += PhotonsPerLightSource;
     }
 	// do not scale photons in progressive photon mapping
     // m_photonMap.scale_photon_power(1.0f/(float)totalPhotons);
