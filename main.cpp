@@ -27,7 +27,9 @@ main(int argc, char*argv[])
     setup();
     srand(time(0));
     //Initialize FreeImage
+#ifndef NO_FREEIMAGE
     FreeImage_Initialise();
+#endif
 
 #ifdef __SSE4_1__
     cout << "Using SSE" << endl;
@@ -57,11 +59,14 @@ main(int argc, char*argv[])
 
     cout << "Alternative tasks" << endl;
 	makeTask1Scene();
+    a1task1();
+    a1task2();
     a1task3();
 #endif
 
+#ifndef NO_FREEIMAGE
 	FreeImage_DeInitialise();
-
+#endif
     return 0;
 }
 

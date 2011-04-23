@@ -11,6 +11,7 @@
 #include <sstream>
 #include <cmath>
 
+
 using namespace std;
 
 
@@ -19,6 +20,7 @@ class LoadedTexture
 Texture loaded from a image file.
 ********************************/
 
+#ifndef NO_FREEIMAGE
 //Tonemaps to (0,1)
 float LoadedTexture::tonemapValue(float value) const
 {
@@ -29,12 +31,13 @@ float LoadedTexture::tonemapValue(float value) const
 
 LoadedTexture::LoadedTexture(std::string filename)
 {
+    int w;
     FREE_IMAGE_FORMAT format = FreeImage_GetFileType(filename.c_str());
     m_bitmap = FreeImage_Load(format, filename.c_str());
+    w = FreeImage_GetWidth(m_bitmap), h = FreeImage_GetHeight(m_bitmap);
+    
+    
     m_maxIntensity = -1e15;
-    
-    int w = FreeImage_GetWidth(m_bitmap), h = FreeImage_GetHeight(m_bitmap);
-    
     #ifdef OPENMP
     #pragma omp parallel for
     #endif
@@ -50,11 +53,12 @@ LoadedTexture::LoadedTexture(std::string filename)
     }
     
     //Initialize lowres version of the bitmap
+    int lrw, pixelSize;
     m_lowres = FreeImage_AllocateT(FreeImage_GetImageType(m_bitmap), LOWRES_WIDTH, (int)((float)LOWRES_WIDTH*((float)h/(float)w)));
    // m_lowres = FreeImage_Rescale(FreeImage_Copy(m_bitmap, 0, 0, w-1, h-1);
 
-    int lrw = FreeImage_GetWidth(m_lowres), lrh = FreeImage_GetHeight(m_lowres);
-    int pixelSize = (h/lrh)*(w/lrw); 
+    lrw = FreeImage_GetWidth(m_lowres), lrh = FreeImage_GetHeight(m_lowres);
+    pixelSize = (h/lrh)*(w/lrw); 
     lrw = FreeImage_GetWidth(m_lowres); lrh = FreeImage_GetHeight(m_lowres);
 
     #ifdef OPENMP
@@ -124,7 +128,6 @@ void LoadedTexture::setPixel(FIBITMAP* bm, Vector3& value, int x, int y)
         }    
         break;
     }
-
 }
 
 //Aux. function to retrieve pixel values from a freeimage bitmap, tonemap them and put them in a vector.
@@ -154,7 +157,8 @@ Vector3 LoadedTexture::getPixel(FIBITMAP* bm, int x, int y)
         }    
         break;
     }
-    
+   
+
     return output;
 }
 
@@ -183,6 +187,8 @@ Vector3 LoadedTexture::lookup(const tex_coord2d_t & texture_coords, bool lowres)
 //    return f;
     return Vector3(tonemapValue(f.x), tonemapValue(f.y), tonemapValue(f.z));
 }
+
+#endif
 
 /***********************************
 class Grid

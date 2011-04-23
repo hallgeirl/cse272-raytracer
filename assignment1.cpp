@@ -10,9 +10,6 @@
 
 SquareLight* g_l;
 
-//TODO
-//Do we need to divide by cos theta when gathering samples? Hmm...
-
 using namespace std;
 
 struct sample
@@ -134,6 +131,7 @@ makeTask1Scene()
 
 void a1task1()
 {
+    cout << "Path tracing" << endl;
 	HitInfo hitInfo(0, Vector3(0, epsilon, 0), Vector3(0,1,0));
 	Vector3 shadeResult(0);
 
@@ -142,7 +140,7 @@ void a1task1()
 	fp = fopen("irrad_pathtracing.dat", "w");
     long double res = 0.;
     long nrays = 0;
-    for (long k = 0; k < 10000000; ++k)
+    for (long k = 0; k < 1300000; ++k)
 	{
         sample s = samplePath();
         if (s.hit)
@@ -158,10 +156,9 @@ void a1task1()
 
         //Division by 1/PI (or multiplying by PI) is neccesary because
         //E(f/p)=F=1/n*sum(f/p) and p=1/PI (distribution of rays)
-		if (k % 10 == 0 )
-			fprintf(fp, "%ld %2.30lf\n", k, PI*(double)(res/((long double)k+1.)));
         if (k % 1000 == 0)
         {
+			fprintf(fp, "%ld %2.30lf\n", k, PI*(double)(res/((long double)k+1.)));
             printf("%ld %2.30lf\n",  nrays, PI*(double)(res/((long double)k+1.)));
         }
 	}
@@ -170,6 +167,7 @@ void a1task1()
 
 void a1task2()
 {
+    cout << "Photon mapping" << endl;
 	HitPoint *hp = new HitPoint;
 	hp->position = Vector3(0.f);
 	hp->normal = Vector3(0, 1, 0);
@@ -184,7 +182,8 @@ void a1task2()
 	{
 		g_scene->ProgressivePhotonPass();
 
-		fprintf(fp, "%d %f %f %d \n", g_scene->GetPhotonsEmitted(), hp->accFlux / PI / pow(hp->radius, 2) / g_scene->GetPhotonsEmitted(), hp->radius, hp->accPhotons);
+		printf("%ld %lf %lf %d \n", g_scene->GetPhotonsEmitted(), (double)hp->accFlux / PI / pow(hp->radius, 2) / g_scene->GetPhotonsEmitted(), hp->radius, hp->accPhotons);
+		fprintf(fp, "%ld %lf %lf %d \n", g_scene->GetPhotonsEmitted(), (double)hp->accFlux / PI / pow(hp->radius, 2) / g_scene->GetPhotonsEmitted(), hp->radius, hp->accPhotons);
 	}
 	fclose(fp);
 
@@ -286,15 +285,16 @@ void a1task3()
     //Take samples
     double indirect = 0;
     long nrays = 0;
+    long print = -1;
 
-
-    for (long k = 0; nrays < 1300000; ++k)
+    for (long k = 0; nrays < 1100000; ++k)
 	{
-		if (k % 1000 == 0)
+		if (nrays >= print)
         {
             double bh = balanceHeuristic(allsamples) + indirect/(k+1);
             cout << nrays << " " << bh << endl;
             fp << nrays << " " << bh << "\n";
+            print += 1000;
         }
 
         sample s = samplePath();

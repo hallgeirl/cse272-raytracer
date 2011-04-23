@@ -1,6 +1,7 @@
 #ifndef _TEXTURE_H_
 #define _TEXTURE_H_
 
+#define NO_FREEIMAGE
 #include "Phong.h"
 #include <Perlin.h>
 #include <string>
@@ -8,11 +9,14 @@
 #include <vector>
 #include <list>
 #include <stdlib.h>
+#ifndef NO_FREEIMAGE
 #include <FreeImage.h>
+#endif
 #include <Worley.h>
 #include <cstdlib>
 #include <cmath>
 #include "Utility.h"
+
 
 //Generate turbulent perlin noise at (x,y,z).
 //The returned number is between -1 and 1.
@@ -123,6 +127,8 @@ public:
     }
 };
 
+#ifndef NO_FREEIMAGE
+
 //Texture loaded from a file
 class LoadedTexture : public Texture2D
 {
@@ -144,6 +150,8 @@ protected:
     static const int LOWRES_WIDTH = 24;	
 	float m_maxIntensity;
 };
+
+#endif
 
 //Shading model that also does textures
 class TexturedPhong : public Phong
