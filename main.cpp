@@ -5,7 +5,7 @@
 #endif
 #include "Miro.h"
 #include "MiroWindow.h"
-#include "assignment1.h"
+#include "assignment2.h"
 #include <FreeImage.h>
 #include "Camera.h"
 #include "Image.h"
@@ -45,7 +45,7 @@ main(int argc, char*argv[])
     miro.mainLoop();
 #elif ! defined(ALTERNATIVE)
     //A1makeTeapotScene();
-    makeCornellScene();
+    makeTask2Scene();
     cout << "Rendering without display" << endl;
     g_camera->setRenderer(Camera::RENDER_RAYTRACE);
     g_camera->click(g_scene, g_image);

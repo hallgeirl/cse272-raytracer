@@ -91,7 +91,8 @@ Scene::preCalc()
 
 inline float tonemapValue(float value, float maxIntensity)
 {
-    return sigmoid(20*value-2.5);
+    return value;
+//    return sigmoid(20*value-2.5);
     //return std::min(pow(value / maxIntensity, 0.35f)*1.1f, 1.0f);
 }
 
@@ -147,6 +148,10 @@ Scene::raytraceImage(Camera *cam, Image *img)
 			{
                 tempImage[i*width+j] = shadeResult;
 			}
+            else
+            {
+                tempImage[i*width+j] = m_bgColor;
+            }
 
 			#ifdef STATS
 			Stats::Primary_Rays++;
