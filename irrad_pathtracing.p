@@ -1,10 +1,18 @@
-set terminal png size 1600, 1200
-set output "irrad_pathtracing.png"
+set terminal postscript  enhanced color eps
 set   autoscale                        # scale axes automatically
 unset log                              # remove any log-scaling
 unset label                            # remove any previous labels
 set ytic auto                          # set ytics automatically
 set title "Irradiance estimate using path tracing"
-set xlabel "Samples"
-set ylabel "Irradiance"
-plot [10000:10000000] "irrad_pathtracing.dat" every 500 with lines title "Irradiance" lc rgb "black"
+set xlabel "Samples (x1000)"
+set ylabel "X"
+set zlabel "Irradiance"
+
+set ytics ("-1" 0, "-0.5" 25, "0" 50, "0.5" 75, "1" 100)
+
+#set pm3d
+#set dgrid3d 100,100,2
+set grid
+set view 45,15
+
+splot "irrad_pathtracing.dat" matrix every 10:1 with lines lw 0.1 lc rgb "black" title ""

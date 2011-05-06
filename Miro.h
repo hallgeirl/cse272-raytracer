@@ -1,11 +1,7 @@
 #ifndef __MIRO_H__
 #define __MIRO_H__
 
-// #ifndef max
-// #define max(a,b) ((a>b)?a:b)
-// #endif
-
-#ifdef ALTERNATIVE
+#if defined (ALTERNATIVE) and ! defined (NO_GFX)
 #define NO_GFX
 #endif
 

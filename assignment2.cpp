@@ -1,77 +1,21 @@
 #include "assignment2.h"
 #include <fstream>
+#include <sstream>
 #include <iostream>
 #include <math.h>
-#include <stdio.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <map>
 #include "Miro.h"
 #include "includes.h"
 #include "Emissive.h"
+#include "Utility.h"
 
 SquareLight* g_l;
 
 using namespace std;
 
-struct sample
-{
-    double value, dist2, costheta;
-    bool hit;
-    bool direct;
-    int nrays;
-    sample() { nrays = 0; } 
-};
-
-typedef map<long, sample> sample_map;
-
-struct samples
-{
-    sample_map X;
-    double p;
-    long n;
-    bool isAreaSample;
-
-    samples() { n = 0; }
-};
-
-sample samplePath()
-{
-    sample out;
-    out.direct = true;
-    HitInfo hitInfo(0, Vector3(0, epsilon, 0), Vector3(0,1,0));
-
-    //Path trace
-    Ray ray = ray.diffuse(hitInfo);
-    out.nrays++;
-    while (true)
-    {
-        if (g_scene->trace(hitInfo, ray, 0, MIRO_TMAX))
-        {
-            //hit diffuse surface->we're done
-            if (!hitInfo.material->isReflective())
-            {
-                double contrib = hitInfo.material->shade(ray, hitInfo, *g_scene)[0];
-                out.value = contrib; //=25/PI=radiance
-                out.costheta = dot(hitInfo.N, ray.d);
-                out.dist2 = hitInfo.P.length2(); //x'-x = x'
-                out.hit = true;
-
-                break;
-            }
-            else 
-            {
-                ray = ray.reflect(hitInfo);
-                out.direct = false;
-                out.nrays++;
-            }
-        }
-        else 
-        {
-            out.hit = false;
-            break;
-        }
-    }
-    return out;
-}
 
 void 
 makeTask2Scene()
@@ -145,7 +89,7 @@ makeTask2Scene()
     t = new Triangle;
     t->setIndex(0);
     t->setMesh(square1);
-    t->setMaterial(new Phong(Vector3(1), Vector3(0))); 
+    t->setMaterial(new Phong(Vector3(0), Vector3(0))); 
     g_scene->addObject(t);
 
 	TriangleMesh * square2 = new TriangleMesh;
@@ -160,10 +104,64 @@ makeTask2Scene()
     t2 = new Triangle;
     t2->setIndex(0);
     t2->setMesh(square2);
-    t2->setMaterial(new Phong(Vector3(1), Vector3(0))); 
+    t2->setMaterial(new Phong(Vector3(0), Vector3(0))); 
     g_scene->addObject(t2);
 
     g_scene->preCalc();
+}
+
+
+
+sample samplePath(const Vector3& origin, const Vector3& direction)
+{
+    sample out;
+    out.direct = true;
+    HitInfo hitInfo(0, origin + Vector3(0,epsilon,0), Vector3(0,1,0));
+
+    Ray ray(origin+Vector3(0,epsilon,0), direction); 
+
+    //Path trace
+    out.nrays++;
+    while (true)
+    {
+        if (g_scene->trace(hitInfo, ray, 0, MIRO_TMAX))
+        {
+            //hit diffuse surface->we're done
+            if (!hitInfo.material->isReflective())
+            {
+                double contrib = hitInfo.material->shade(ray, hitInfo, *g_scene)[0];
+                out.value = contrib; //=25/PI=radiance
+                out.costheta = dot(hitInfo.N, ray.d);
+                out.dist2 = hitInfo.P.length2(); //x'-x = x'
+                out.hit = true;
+
+                break;
+            }
+            //hit reflective surface => reflect and trace again
+            else 
+            {
+                ray = ray.reflect(hitInfo);
+                out.direct = false;
+                out.nrays++;
+            }
+        }
+        //Missed the scene
+        else 
+        {
+            out.hit = false;
+            break;
+        }
+    }
+    return out;
+}
+
+sample samplePath(const Vector3& origin)
+{
+    HitInfo hitInfo(0, origin + Vector3(0,epsilon,0), Vector3(0,1,0));
+
+    //Path trace
+    Ray ray = ray.diffuse(hitInfo);
+    return samplePath(origin, ray.d);
 }
 
 void a2task1()
@@ -172,27 +170,50 @@ void a2task1()
 	HitInfo hitInfo(0, Vector3(0, epsilon, 0), Vector3(0,1,0));
 	Vector3 shadeResult(0);
 
-	FILE *fp = stdout;
+	ofstream fp("irrad_pathtracing.dat");
+    int N = 100;
 
-	fp = fopen("irrad_pathtracing.dat", "w");
-    long double res = 0.;
-    long nrays = 0;
-    for (long k = 0; k < 1300000; ++k)
-	{
-        sample s = samplePath();
-        if (s.hit)
-            res += s.value;
-        nrays += s.nrays;
+    map<double, string> outputs;
 
-        //Division by 1/PI (or multiplying by PI) is neccesary because
-        //E(f/p)=F=1/n*sum(f/p) and p=1/PI (distribution of rays)
-        if (k % 1000 == 0)
+    #pragma omp parallel for schedule(static,1)
+    for (int i = 0; i < N; i++)
+    {
+        stringstream output;
+
+        long double res = 0.;
+        long nrays = 0;
+        Vector3 origin(2.*(float)i/((float)N-1.)-1., 0, 0);
+        #pragma omp critical
         {
-			fprintf(fp, "%ld %2.30lf\n", k, PI*(double)(res/((long double)k+1.)));
-            printf("%ld %2.30lf\n",  nrays, PI*(double)(res/((long double)k+1.)));
+            cout << "Sampling at " << origin  << endl;
         }
-	}
-	fclose(fp);
+        long k;
+        for (k = 1; k <= 10000000; ++k)
+        {
+            sample s = samplePath(origin);
+            if (s.hit)
+                res += s.value;
+            nrays += s.nrays;
+
+            //Division by 1/PI (or multiplying by PI) is neccesary because
+            //E(f/p)=F=1/n*sum(f/p) and p=1/PI (distribution of rays)
+            if (k % 1000 == 0)
+            {
+                output << (k > 0 ? "\t" : "") << PI*(double)(res/((long double)k+1.));
+                if (k % 100000 == 0 && k > 0)
+                    cout << k+1 << "\t" << origin.x << "\t" << PI*(double)(res/((long double)k+1.)) << "\n";
+            }
+        }
+        outputs[origin.x] = output.str();
+    }
+
+    map<double, string>::iterator it = outputs.begin();
+
+    while (it != outputs.end())
+    {
+        fp << it->second << endl;
+        it++;
+    }
 }
 
 void a2task2()
@@ -256,7 +277,7 @@ void a2task3()
             print += 1000;
         }
 
-        sample s = samplePath();
+        sample s = samplePath(Vector3(0,0,0));
         nrays += s.nrays;
 
         //we only want to importance sample the direct lighting
@@ -273,4 +294,115 @@ void a2task3()
         nrays += directSamples.X[k].nrays;
 	}
     fp.close();
+}
+
+void mutate(double u[3], double u_out[3])
+{
+    //Mutation magnitudes
+    double dpos = 0.2, dtheta = 0.25, dphi = 0.1;
+
+    u_out[0] = u[0] + (2.*dpos*frand()-dpos);
+    u_out[1] = u[1] + (2.*dtheta*frand()-dtheta); 
+    u_out[2] = u[2] + (2.*dphi*frand()-dphi);
+
+    if (u_out[0] < -1) u_out[0] = -1;
+    else if (u_out[0] > 1) u_out[0] = 1;
+
+    if (u_out[1] < 0) u_out[1] += 2.*PI;
+    else if (u_out[1] > 2.*PI) u_out[1] -= 2.*PI;
+
+    if (u_out[2] < 0) u_out[2] = 0;
+    else if (u_out[2] > PI/2.) u_out[2] = PI/2;
+}
+
+void a2task4()
+{
+    cout << "Metropolis sampling" << endl;
+	HitInfo hitInfo(0, Vector3(0, epsilon, 0), Vector3(0,1,0));
+	Vector3 shadeResult(0);
+
+	ofstream fp("irrad_pathtracing.dat");
+    const int N = 10;
+
+    //Output irradiances for each point
+    //There's N points distributed uniformly over the interval
+    double outputs[N];
+
+    memset(outputs, 0, sizeof(double)*N);
+
+    double u[3];
+    //Choose an initial path that gives a non-zero contribution
+
+    double I = 0;
+
+    Vector3 surfaceNormal(0,1,0);
+
+    cout << "Attempting to find a starting point..." << endl;
+
+    while (I <= 0)
+    {
+        //Position
+        u[0] = 2.*frand() - 1;
+        //Direction
+        u[1] = 2.*PI*frand();       //Theta (rotation)
+        u[2] = asin(sqrt(frand())); //Phi (pitch)
+
+        sample s = samplePath(u[0], alignHemisphereToVector(surfaceNormal, u[1], u[2]));
+        if (s.hit)
+            I = s.value;
+    }
+
+    cout << "Found one! Contribution: " << I << endl;
+    
+    for (int i = 1; i < 1000000; i++)
+    {
+        //Mutate path. 
+        double u_mutated[3];
+        mutate(u, u_mutated);
+
+        sample s = samplePath(u_mutated[0], alignHemisphereToVector(surfaceNormal, u_mutated[1], u_mutated[2]));
+        if (!s.hit) s.value = 0;
+
+        double accept = s.value / I;
+        if (frand() < accept)
+        {
+            u[0] = u_mutated[0];
+            u[1] = u_mutated[1];
+            u[2] = u_mutated[2];
+            I = s.value;
+        }
+
+        outputs[(int)(((u[0]+1.)/2)*N)] += I;
+
+        for (int j = 0; j < N; j++)
+            cout << outputs[j]/i << "\t";
+        cout << endl;
+
+
+/*        long double res = 0.;
+        long nrays = 0;
+        Vector3 origin(2.*(float)i/((float)N-1.)-1., 0, 0);
+        #pragma omp critical
+        {
+            cout << "Sampling at " << origin  << endl;
+        }
+        long k;
+        for (k = 1; k <= 10000000; ++k)
+        {
+            sample s = samplePath(origin);
+            if (s.hit)
+                res += s.value;
+            nrays += s.nrays;
+
+            //Division by 1/PI (or multiplying by PI) is neccesary because
+            //E(f/p)=F=1/n*sum(f/p) and p=1/PI (distribution of rays)
+            if (k % 1000 == 0)
+            {
+                output << (k > 0 ? "\t" : "") << PI*(double)(res/((long double)k+1.));
+                if (k % 100000 == 0 && k > 0)
+                    cout << k+1 << "\t" << origin.x << "\t" << PI*(double)(res/((long double)k+1.)) << "\n";
+            }
+        }
+        outputs[origin.x] = output.str();*/
+    }
 }

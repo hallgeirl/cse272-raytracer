@@ -6,6 +6,10 @@ all: $(NAME)
 include Makedefs
 SOURCES -=  parse.cpp lexer.cpp
 OBJS -=  parse.o lexer.o
+PDF=$(shell ls *.pdf 2>/dev/null)
+PNG=$(shell ls *.png 2>/dev/null)
+PLOTS=$(patsubst %.p,%.pdf,$(shell ls *.p))
+#PLOTS=$(patsubst %.p,%.png,$(shell ls *.p))
 
 # 
 # lexer.cpp: lexer.lex
@@ -27,16 +31,17 @@ OBJS -=  parse.o lexer.o
 
 -include .deps/*.d
 
+$(NAME): $(OBJS)
+	$(ECHO) "Linking $@..."
+	$(CXX) -o $@ $(OBJS) $(LDFLAGS)
+	$(ECHO) "Built $@!"
 
 freeimage:
 	$(MAKE) -C lib/src/FreeImage
 	mkdir -p lib/lib
 	mv lib/src/FreeImage/Dist/libfreeimage.a lib/lib/libfreeimage.a
 
-$(NAME): $(OBJS)
-	$(ECHO) "Linking $@..."
-	$(CXX) -o $@ $(OBJS) $(LDFLAGS)
-	$(ECHO) "Built $@!"
+plots: $(PLOTS)
 	
 test: $(NAME)
 	./miro && eog *.ppm && rm *.ppm

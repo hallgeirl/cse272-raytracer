@@ -38,31 +38,44 @@ main(int argc, char*argv[])
     cout << "Using OpenMP with up to " << omp_get_max_threads() << " threads." << endl;
 #endif
 
+//mode = 0: Create opengl window and everything
+//mode = 1: Render scenes without any GUI
+//mode = 2: Other things
+int mode = 0;
 
-#if ! defined(NO_GFX) and ! defined(ALTERNATIVE)
-    MiroWindow miro(&argc, argv);
+#if defined(NO_GFX)
+    mode = 1;
+#endif
+#if defined(ALTERNATIVE)
+    mode = 2;
+#endif
+
+cout << "Mode: " << mode << endl;
+
+if (mode == 0)
+{
     cout << "Executing main rendering loop" << endl;
+    MiroWindow miro(&argc, argv);
     miro.mainLoop();
-#elif ! defined(ALTERNATIVE)
+}
+else if (mode == 1)
+{
     //A1makeTeapotScene();
     makeTask2Scene();
     cout << "Rendering without display" << endl;
     g_camera->setRenderer(Camera::RENDER_RAYTRACE);
     g_camera->click(g_scene, g_image);
     g_image->writePPM();
-#else
-/*    makeCornellScene();
-    cout << "Rendering without display" << endl;
-    g_camera->setRenderer(Camera::RENDER_RAYTRACE);
-    g_camera->click(g_scene, g_image);
-    g_image->writePPM();*/
-
+}
+else
+{
     cout << "Alternative tasks" << endl;
-	makeTask1Scene();
-    a1task1();
-    a1task2();
-    a1task3();
-#endif
+	makeTask2Scene();
+ //   a2task1();
+/*    a2task2();
+    a2task3();*/
+    a2task4();
+}
 
 #ifndef NO_FREEIMAGE
 	FreeImage_DeInitialise();

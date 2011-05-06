@@ -18,7 +18,13 @@ CXXFLAGS          += -DNO_GFX $(INCDIRS) -O3 -DOPENMP -fomit-frame-pointer -fope
 -Wno-deprecated -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_GNU_SOURCE
 # -msse4.1
 
-.SUFFIXES: .cpp .h .d .o
+.SUFFIXES: .cpp .h .d .o .p .pdf .png
+
+.p.pdf:
+	gnuplot $< | epstopdf -f > $@
+
+.p.png:
+	gnuplot $< > $@
 
 .cpp.o:
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
