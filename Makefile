@@ -11,6 +11,8 @@ PNG=$(shell ls *.png 2>/dev/null)
 PLOTS=$(patsubst %.p,%.pdf,$(shell ls *.p))
 #PLOTS=$(patsubst %.p,%.png,$(shell ls *.p))
 
+CXXFLAGS += -DLINUX
+
 # 
 # lexer.cpp: lexer.lex
 # 	$(ECHO) "Flex-ing lexer.lex"

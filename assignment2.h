@@ -1,6 +1,7 @@
 #ifndef __ASSIGNMENT2_H_
 #define __ASSIGNMENT2_H_
 #include <map>
+#include <cstring>
 
 void makeTask2Scene();
 void a2task1();
@@ -28,5 +29,16 @@ struct samples
 
     samples() { n = 0; }
 };
+
+struct path
+{
+    double u[3]; //position, theta, phi
+    double I;
+}; 
+
+inline void path_copy(path& to, path& from)
+{
+    memcpy(&to, &from, sizeof(path));
+}
 
 #endif
