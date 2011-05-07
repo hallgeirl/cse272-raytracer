@@ -91,7 +91,7 @@ makeTask2Scene()
     t = new Triangle;
     t->setIndex(0);
     t->setMesh(square1);
-    t->setMaterial(new Phong(Vector3(0), Vector3(0))); 
+    t->setMaterial(new Phong(Vector3(1), Vector3(0))); 
     g_scene->addObject(t);
 
 	TriangleMesh * square2 = new TriangleMesh;
@@ -106,7 +106,7 @@ makeTask2Scene()
     t2 = new Triangle;
     t2->setIndex(0);
     t2->setMesh(square2);
-    t2->setMaterial(new Phong(Vector3(0), Vector3(0))); 
+    t2->setMaterial(new Phong(Vector3(1), Vector3(0))); 
     g_scene->addObject(t2);
 
     g_scene->preCalc();
@@ -116,7 +116,7 @@ makeTask2Scene()
 	HitPoint *hp;
 	float delta = 0.02;
 	
-	for (float i = -0.98; i < 1; i+=delta)
+	for (float i = -0.99; i < 1; i+=delta)
 	{
 		hp = new HitPoint;
 		hp->position = Vector3(i, 0.f, 0.f);
@@ -291,21 +291,20 @@ void a2task1()
 void a2task2()
 {
     cout << "Photon mapping" << endl;
-	HitPoint *hp = new HitPoint;
-	hp->position = Vector3(0.f);
-	hp->normal = Vector3(0, 1, 0);
-	hp->radius = 0.25f;
-
-	g_scene->addHitPoint(hp);
 
 	ofstream fp("irrad_progphotonmapping.dat");
 
 	while (g_scene->GetPhotonsEmitted() < 100000000)
 	{
 		g_scene->ProgressivePhotonPass();
+		//printf("%ld %lf %lf %d \n", g_scene->GetPhotonsEmitted(), (double)hp->accFlux / PI / pow(hp->radius, 2) / g_scene->GetPhotonsEmitted(), hp->radius, hp->accPhotons);
+	}
 
-		printf("%ld %lf %lf %d \n", g_scene->GetPhotonsEmitted(), (double)hp->accFlux / PI / pow(hp->radius, 2) / g_scene->GetPhotonsEmitted(), hp->radius, hp->accPhotons);
-		//fprintf(fp, "%ld %lf %lf %d \n", g_scene->GetPhotonsEmitted(), (double)hp->accFlux / PI / pow(hp->radius, 2) / g_scene->GetPhotonsEmitted(), hp->radius, hp->accPhotons);
+	for (int n = 0; n < g_scene->hitpoints()->size(); ++n)
+	{
+		HitPoint *hp = (*g_scene->hitpoints())[n];
+		
+		fp << (double)hp->accFlux / PI / pow(hp->radius, 2) / g_scene->GetPhotonsEmitted() << "\t" << hp->position.x << endl;
 	}
 	fp.close();
 
