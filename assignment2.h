@@ -14,7 +14,9 @@ struct sample
     bool hit;
     bool direct;
     int nrays;
-    sample() { nrays = 0; } 
+    sample() 
+		:nrays(0), hit(false)
+	{} 
 };
 
 typedef std::map<long, sample> sample_map;

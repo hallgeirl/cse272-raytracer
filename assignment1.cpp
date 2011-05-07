@@ -8,7 +8,7 @@
 #include "includes.h"
 #include "Emissive.h"
 
-SquareLight* g_l;
+SquareLight* g_sl;
 
 using namespace std;
 
@@ -80,7 +80,7 @@ makeTask1Scene()
 
     //real squarelight
     SquareLight *l = new SquareLight;
-    g_l = l;
+    g_sl = l;
     l->setDimensions(2,2);
     l->setPosition(Vector3(0,10,0));
     l->setNormal(Vector3(0,-1,0));
@@ -191,7 +191,7 @@ void a1task2()
 
 sample sampleLightSource()
 {
-    Vector3 lightPos = g_l->samplePhotonOrigin();
+    Vector3 lightPos = g_sl->samplePhotonOrigin();
 
     //origin is (0,0,0)
     Vector3 l = lightPos;
@@ -203,7 +203,7 @@ sample sampleLightSource()
     out.costheta = cos_theta;
     out.dist2 = lightPos.length2();
 
-    out.value = g_l->radiance(lightPos, l) * cos_theta*cos_theta/out.dist2;
+    out.value = g_sl->radiance(lightPos, l) * cos_theta*cos_theta/out.dist2;
     out.direct = true;
     out.nrays ++;
 
