@@ -263,7 +263,7 @@ void a2task1()
             cout << "Sampling at " << origin  << endl;
         }
         long k;
-        for (k = 1; k <= 10000000; ++k)
+        for (k = 1; k <= 100000000; ++k)
         {
             sample s = samplePath(origin);
             if (s.hit)
@@ -370,23 +370,51 @@ void a2task3()
     fp.close();
 }
 
-void mutate(double u[3], double u_out[3])
+double mutate_value(double s1, double s2)
+{
+    double dv = s2*exp(-log(s2/s1)*frand());
+    if (frand() < 0.5)
+        return -dv;
+    else
+        return dv;
+
+}
+
+
+void mutate_path(double u[3], double (&u_out)[3])
 {
     //Mutation magnitudes
-    double dpos = 0.2, dtheta = 0.25, dphi = 0.1;
+    double dpos = 0.2, dtheta = 0.25, dphi = 0.2;
+    double p_large = 1;
 
-    u_out[0] = u[0] + (2.*dpos*frand()-dpos);
+    if (frand() < p_large)
+    {
+        u_out[0] = 2.*frand() - 1.;
+        u_out[1] = 2.*frand()*PI;
+        u_out[2] = asin(sqrt(frand()));
+    }
+    else
+    {
+        u_out[0] += mutate_value(0.01, dpos);
+        u_out[1] += mutate_value(0.01, dtheta);
+        u_out[2] += mutate_value(0.01, dphi);
+    }
+    //cout << mutate_value(u[0], 0.1, dpos) << endl;
+
+/*    u_out[0] = u[0] + (2.*dpos*frand()-dpos);
     u_out[1] = u[1] + (2.*dtheta*frand()-dtheta); 
-    u_out[2] = u[2] + (2.*dphi*frand()-dphi);
+    u_out[2] = u[2] + (2.*dphi*frand()-dphi);*/
 
-    if (u_out[0] < -1) u_out[0] = -1;
+
+/*    if (u_out[0] < -1) u_out[0] = -1;
     else if (u_out[0] > 1) u_out[0] = 1;
 
     if (u_out[1] < 0) u_out[1] += 2.*PI;
     else if (u_out[1] > 2.*PI) u_out[1] -= 2.*PI;
 
     if (u_out[2] < 0) u_out[2] = 0;
-    else if (u_out[2] > PI/2.) u_out[2] = PI/2;
+    else if (u_out[2] > PI/2.) u_out[2] = PI/2;*/
+
 }
 
 void a2task4()
@@ -395,8 +423,10 @@ void a2task4()
 	HitInfo hitInfo(0, Vector3(0, epsilon, 0), Vector3(0,1,0));
 	Vector3 shadeResult(0);
 
-	ofstream fp("irrad_pathtracing.dat");
-    const int N = 10;
+	ofstream fp("irrad_metropolis.dat");
+    const int N = 10; //Number of points
+    const int Nseeds = 1000000;
+    const int Nsamples = 100000000;
 
     //Output irradiances for each point
     //There's N points distributed uniformly over the interval
@@ -404,53 +434,85 @@ void a2task4()
 
     memset(outputs, 0, sizeof(double)*N);
 
-    double u[3];
-    //Choose an initial path that gives a non-zero contribution
-
     double I = 0;
 
     Vector3 surfaceNormal(0,1,0);
 
-    cout << "Attempting to find a starting point..." << endl;
+    cout << "Generating path seeds..." << endl;
 
-    while (I <= 0)
+    path p0;
+    p0.I = 0;
+    double b = 0;
+
+    //Generate path seeds
+    for (int i = 0; i < Nseeds; i++)
     {
+        double u_tmp[3];
         //Position
-        u[0] = 2.*frand() - 1;
-        //Direction
-        u[1] = 2.*PI*frand();       //Theta (rotation)
-        u[2] = asin(sqrt(frand())); //Phi (pitch)
+        u_tmp[0] = 2.*frand() - 1;
 
-        sample s = samplePath(u[0], alignHemisphereToVector(surfaceNormal, u[1], u[2]));
-        if (s.hit)
-            I = s.value;
+        //Direction
+        u_tmp[1] = 2.*PI*frand();       //Theta (rotation)
+        u_tmp[2] = asin(sqrt(frand())); //Phi (pitch)
+        Vector3 dir = alignHemisphereToVector(surfaceNormal, u_tmp[1], u_tmp[2]);
+
+        sample s = samplePath(Vector3(u_tmp[0], 0, 0), dir);
+    
+        if (s.hit && s.value > 0)
+        {
+            //b += s.value*PI;
+            b += s.value/(1./2.)*PI/dot(dir, surfaceNormal);
+            //b += s.value;
+            if (p0.I < s.value)
+            {
+                p0.I = s.value;
+                memcpy(p0.u, u_tmp, 3*sizeof(double));
+            }
+        }
     }
 
-    cout << "Found one! Contribution: " << I << endl;
-    
-    for (int i = 1; i < 1000000; i++)
+
+    b /= Nseeds;
+    //b *= PI;
+
+    cout << "b=" << b << endl;
+    cout << "p0=" << p0.I << "; [" << p0.u[0] << ", " << p0.u[1] << ", " << p0.u[2] << "]" << endl;
+
+    for (int i = 1; i < Nsamples; i++)
     {
         //Mutate path. 
-        double u_mutated[3];
-        mutate(u, u_mutated);
+        path p1;
+        mutate_path(p0.u, p1.u);
 
-        sample s = samplePath(u_mutated[0], alignHemisphereToVector(surfaceNormal, u_mutated[1], u_mutated[2]));
+        sample s = samplePath(Vector3(p1.u[0],0,0), alignHemisphereToVector(surfaceNormal, p1.u[1], p1.u[2]));
+        
         if (!s.hit) s.value = 0;
+        p1.I = s.value;
+        
+        double accept = std::min(p1.I / p0.I, 1.);
+        int x0 = (int)(((p0.u[0]+1.)/2)*N);
+        int x1 = (int)(((p1.u[0]+1.)/2)*N);
 
-        double accept = s.value / I;
+        outputs[x0] += N*b*(1.-accept)/Nsamples/2;
+        outputs[x1] += N*b*(accept)/Nsamples/2;
+
+
         if (frand() < accept)
         {
-            u[0] = u_mutated[0];
-            u[1] = u_mutated[1];
-            u[2] = u_mutated[2];
-            I = s.value;
+            path_copy(p0, p1);
         }
 
-        outputs[(int)(((u[0]+1.)/2)*N)] += I;
-
-        for (int j = 0; j < N; j++)
-            cout << outputs[j]/i << "\t";
-        cout << endl;
+        if (i % 10000 == 0)
+        {
+            for (int j = 0; j < N; j++)
+                cout << outputs[j]<< "\t";
+            cout << endl;
+            double d = 0;
+            
+            for (int j = 0; j < N; j++)
+                d += outputs[j];
+            cout << d/N << endl;
+        }
 
 
 /*        long double res = 0.;

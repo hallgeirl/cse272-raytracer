@@ -15,7 +15,11 @@ void addModel(const char* filename, Material *mat, Scene* scene, Vector3 positio
 //Returns random number between 0 and 1
 inline float frand()
 {
+#ifdef LINUX
+    return drand48();
+#else
     return (float)rand() / (float)RAND_MAX;
+#endif
 }
 
 inline float sigmoid(float x)
