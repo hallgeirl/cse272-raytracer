@@ -197,8 +197,11 @@ bool UpdateMeasurementPoints(const Vector3& pos, const Vector3& power)
 
 		if (d <= hp->radius)
 		{
+			float delta = (hp->accPhotons + PHOTON_ALPHA)/(hp->accPhotons + 1);
+			hp->radius *= sqrt(delta);
+			hp->accPhotons++;
 			//need to update radius and flux
-			hp->accFlux += power.x;
+			hp->accFlux = (hp->accFlux + power.x) * delta;
 
 			// can hit multiple measurement points
 			hit = true;
@@ -294,7 +297,7 @@ void a2task2()
 
 	ofstream fp("irrad_progphotonmapping.dat");
 
-	while (g_scene->GetPhotonsEmitted() < 100000000)
+	while (g_scene->GetPhotonsEmitted() < 1000000)
 	{
 		g_scene->ProgressivePhotonPass();
 		//printf("%ld %lf %lf %d \n", g_scene->GetPhotonsEmitted(), (double)hp->accFlux / PI / pow(hp->radius, 2) / g_scene->GetPhotonsEmitted(), hp->radius, hp->accPhotons);
@@ -317,10 +320,11 @@ void a2task3()
 	//find starting good path
     Vector3 power = g_l->color() * g_l->wattage(); 
 	Ray goodPath;
-	int m_photonsEmitted = 0;
-	float prev_di = 0;
+	int m_photonsEmitted;
+	float prev_di = 1;
 	float prev_ai = 0;
-	float i = 1;
+	float mutated = 1;
+	float accepted = 0;
 
 	do
 	{
@@ -328,7 +332,7 @@ void a2task3()
         goodPath.d = g_l->samplePhotonOrigin();
 	} while (!SamplePhotonPath(goodPath, power));
 
-	for (int n = 0; n < 100000; n++)
+	for (m_photonsEmitted = 0; m_photonsEmitted < 1000000; m_photonsEmitted++)
     {
         //Test new random photon
         Ray path(g_l->samplePhotonDirection(), g_l->samplePhotonOrigin());
@@ -339,19 +343,29 @@ void a2task3()
 		}
 
 		//Mutate path
-		float di = prev_di + (1.f / i) * (prev_ai - 0.234);
+		float di = prev_di + (1.f / mutated) * (prev_ai - 0.234);
 		float dui = ((2 * frand() - 1) > 0 ? 1 : -1) * pow(frand(), di+1); 
-		++i;
+		++mutated;
 		path.d = goodPath.d + dui;
+		prev_di = di;
+		prev_ai += ((float)accepted/(float)mutated - 0.234) / (float)mutated;
 		
 		if (SamplePhotonPath(path, power))
 		{
 			goodPath = path;
+			++accepted;
 			continue;
 		}
     }
 
-	m_photonsEmitted += 100000;
+	for (int n = 0; n < g_scene->hitpoints()->size(); ++n)
+	{
+		HitPoint *hp = (*g_scene->hitpoints())[n];
+
+		float result = (double)hp->accFlux / PI / pow(hp->radius, 2) * ((float)hp->accPhotons / (float)m_photonsEmitted);
+		
+		fp << result << "\t" << hp->position.x << endl;
+	}
 
     fp.close();
 }
