@@ -66,8 +66,8 @@ makeTask2Scene()
 	TriangleMesh * mirror2 = new TriangleMesh;
     mirror2->createSingleTriangle();
     mirror2->setV1(Vector3( -2, 1, -2));
-    mirror2->setV2(Vector3( -2, 1, 2));
-    mirror2->setV3(Vector3( 2, 1, 2));
+    mirror2->setV2(Vector3( 2, 1, 2));
+    mirror2->setV3(Vector3( -2, 1, 2));
     mirror2->setN1(Vector3(0, -1, 0));
     mirror2->setN2(Vector3(0, -1, 0));
     mirror2->setN3(Vector3(0, -1, 0));
@@ -82,8 +82,8 @@ makeTask2Scene()
     TriangleMesh * square1 = new TriangleMesh;
     square1->createSingleTriangle();
     square1->setV1(Vector3( -1, 0, -1));
-    square1->setV2(Vector3( 1, 0, -1));
-    square1->setV3(Vector3( 1, 0, 1));
+    square1->setV2(Vector3( 1, 0, 1));
+    square1->setV3(Vector3( 1, 0, -1));
     square1->setN1(Vector3(0, 1, 0));
     square1->setN2(Vector3(0, 1, 0));
     square1->setN3(Vector3(0, 1, 0));
@@ -197,24 +197,42 @@ bool UpdateMeasurementPoints(const Vector3& pos, const Vector3& power)
 
 		if (d <= hp->radius)
 		{
-			float delta = (hp->accPhotons + PHOTON_ALPHA)/(hp->accPhotons + 1);
-			hp->radius *= sqrt(delta);
-			hp->accPhotons++;
-			//need to update radius and flux
-			hp->accFlux = (hp->accFlux + power.x) * delta;
+			//wait to update radius and flux
+			hp->newPhotons++;
+			hp->newFlux += power.x;
 
-			// can hit multiple measurement points
+			// can hit multiple measurement points	
 			hit = true;
 		}
 	}
 	return hit;
 }
 
+void UpdatePhotonStats()
+{
+	for (int n = 0; n < m_hitpoints.size(); ++n)
+	{
+		HitPoint *hp = m_hitpoints[n];
+		
+		// only adding a ratio of the newly added photons
+		float delta = (hp->accPhotons + PHOTON_ALPHA * hp->newPhotons)/(hp->accPhotons + hp->newPhotons);
+		hp->radius *= sqrt(delta);
+		hp->accPhotons += (int)(PHOTON_ALPHA * hp->newPhotons);
+		
+		// not sure about this flux acc, or about calculating the irradiance
+		hp->accFlux = ( hp->accFlux + hp->newFlux) * delta;	
+
+		// reset new values
+		hp->newPhotons = 0;
+		hp->newFlux = 0.f;
+	}
+}
+
 bool SamplePhotonPath(const Ray& path, const Vector3& power)
 {
-    HitInfo hitInfo(0, path.o + Vector3(0,epsilon,0), Vector3(0,1,0));
+    HitInfo hitInfo(0, path.o, Vector3(0,1,0));
 
-	Ray ray(path.o + Vector3(0,epsilon,0), path.d);
+	Ray ray(path.o, path.d);
 
     while (true)
     {
@@ -328,14 +346,20 @@ void a2task3()
 
 	do
 	{
-        goodPath.o = g_l->samplePhotonDirection();
-        goodPath.d = g_l->samplePhotonOrigin();
+        goodPath.o = g_l->samplePhotonOrigin();
+        goodPath.d = g_l->samplePhotonDirection();
 	} while (!SamplePhotonPath(goodPath, power));
 
-	for (m_photonsEmitted = 0; m_photonsEmitted < 1000000; m_photonsEmitted++)
+	for (m_photonsEmitted = 0; m_photonsEmitted < 10000000; m_photonsEmitted++)
     {
+		if ((m_photonsEmitted + 1)% 1000000 == 0)
+		{
+			UpdatePhotonStats();
+			printf("Update Photon Stats %f percent \n", (float)m_photonsEmitted/(float)10000000);
+		} 
+
         //Test new random photon
-        Ray path(g_l->samplePhotonDirection(), g_l->samplePhotonOrigin());
+        Ray path(g_l->samplePhotonOrigin(), g_l->samplePhotonDirection());
 		if (SamplePhotonPath(path, power))
 		{
 			goodPath = path;
@@ -344,9 +368,10 @@ void a2task3()
 
 		//Mutate path
 		float di = prev_di + (1.f / mutated) * (prev_ai - 0.234);
-		float dui = ((2 * frand() - 1) > 0 ? 1 : -1) * pow(frand(), di+1); 
+		float dui = ((2 * frand() - 1) > 0 ? 1 : -1) * pow(frand(), (1/di)+1); 
 		++mutated;
 		path.d = goodPath.d + dui;
+		path.d.normalize();
 		prev_di = di;
 		prev_ai += ((float)accepted/(float)mutated - 0.234) / (float)mutated;
 		
@@ -362,7 +387,7 @@ void a2task3()
 	{
 		HitPoint *hp = (*g_scene->hitpoints())[n];
 
-		float result = (double)hp->accFlux / PI / pow(hp->radius, 2) * ((float)hp->accPhotons / (float)m_photonsEmitted);
+		float result = (double)hp->accFlux / PI / pow(hp->radius, 2) / m_photonsEmitted;
 		
 		fp << result << "\t" << hp->position.x << endl;
 	}
