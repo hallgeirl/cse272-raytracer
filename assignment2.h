@@ -41,4 +41,6 @@ inline void path_copy(path& to, path& from)
     memcpy(&to, &from, sizeof(path));
 }
 
+static const double p_large = .1;
+
 #endif

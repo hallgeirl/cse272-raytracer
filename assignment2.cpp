@@ -298,7 +298,9 @@ void a2task3()
 
 double mutate_value(double s1, double s2)
 {
+//    double dv = (s2-s1)*frand()+s1;
     double dv = s2*exp(-log(s2/s1)*frand());
+
     if (frand() < 0.5)
         return -dv;
     else
@@ -306,24 +308,27 @@ double mutate_value(double s1, double s2)
 
 }
 
-
-void mutate_path(double u[3], double (&u_out)[3])
+void mutate_path(const path &p0, path &p1)
 {
     //Mutation magnitudes
-    double dpos = 0.2, dtheta = 0.25, dphi = 0.2;
-    double p_large = 1;
+    double dpos = 0.2, dtheta = 0.1, dphi = 0.1;
 
     if (frand() < p_large)
     {
-        u_out[0] = 2.*frand() - 1.;
-        u_out[1] = 2.*frand()*PI;
-        u_out[2] = asin(sqrt(frand()));
+        p1.u[0] = 2.*frand() - 1.;
+        p1.u[1] = 2.*frand()*PI;
+        p1.u[2] = asin(sqrt(frand()));
     }
     else
     {
-        u_out[0] += mutate_value(0.01, dpos);
-        u_out[1] += mutate_value(0.01, dtheta);
-        u_out[2] += mutate_value(0.01, dphi);
+        static int n = 0;
+        n++;
+        static double tot =0;
+        tot += mutate_value(0., dpos);
+
+        p1.u[0] = p0.u[0] + mutate_value(0., dpos);
+        p1.u[1] = p0.u[1] + mutate_value(0., dtheta);
+        p1.u[2] = p0.u[2] + mutate_value(0., dphi);
     }
     //cout << mutate_value(u[0], 0.1, dpos) << endl;
 
@@ -332,15 +337,14 @@ void mutate_path(double u[3], double (&u_out)[3])
     u_out[2] = u[2] + (2.*dphi*frand()-dphi);*/
 
 
-/*    if (u_out[0] < -1) u_out[0] = -1;
-    else if (u_out[0] > 1) u_out[0] = 1;
+    if (p1.u[0] < -1) p1.u[0] = -1;
+    else if (p1.u[0] > 1) p1.u[0] = 1;
 
-    if (u_out[1] < 0) u_out[1] += 2.*PI;
-    else if (u_out[1] > 2.*PI) u_out[1] -= 2.*PI;
+    if (p1.u[1] < 0) p1.u[1] += 2.*PI;
+    else if (p1.u[1] > 2.*PI) p1.u[1] -= 2.*PI;
 
-    if (u_out[2] < 0) u_out[2] = 0;
-    else if (u_out[2] > PI/2.) u_out[2] = PI/2;*/
-
+    if (p1.u[2] < 0) p1.u[2] = 0;
+    else if (p1.u[2] > PI/2.) p1.u[2] = PI/2;
 }
 
 void a2task4()
@@ -350,7 +354,7 @@ void a2task4()
 	Vector3 shadeResult(0);
 
 	ofstream fp("irrad_metropolis.dat");
-    const int N = 10; //Number of points
+    const int N = 100; //Number of points
     const int Nseeds = 1000000;
     const int Nsamples = 100000000;
 
@@ -386,9 +390,7 @@ void a2task4()
     
         if (s.hit && s.value > 0)
         {
-            //b += s.value*PI;
             b += s.value/(1./2.)*PI/dot(dir, surfaceNormal);
-            //b += s.value;
             if (p0.I < s.value)
             {
                 p0.I = s.value;
@@ -397,9 +399,7 @@ void a2task4()
         }
     }
 
-
     b /= Nseeds;
-    //b *= PI;
 
     cout << "b=" << b << endl;
     cout << "p0=" << p0.I << "; [" << p0.u[0] << ", " << p0.u[1] << ", " << p0.u[2] << "]" << endl;
@@ -408,7 +408,7 @@ void a2task4()
     {
         //Mutate path. 
         path p1;
-        mutate_path(p0.u, p1.u);
+        mutate_path(p0, p1);
 
         sample s = samplePath(Vector3(p1.u[0],0,0), alignHemisphereToVector(surfaceNormal, p1.u[1], p1.u[2]));
         
@@ -416,55 +416,37 @@ void a2task4()
         p1.I = s.value;
         
         double accept = std::min(p1.I / p0.I, 1.);
-        int x0 = (int)(((p0.u[0]+1.)/2)*N);
-        int x1 = (int)(((p1.u[0]+1.)/2)*N);
+        int x0 = (int)(((p0.u[0]+1.)/2.)*N);
+        int x1 = (int)(((p1.u[0]+1.)/2.)*N);
+        if (x0 == N) x0--;
+        if (x1 == N) x1--;
 
-        outputs[x0] += N*b*(1.-accept)/Nsamples/2;
-        outputs[x1] += N*b*(accept)/Nsamples/2;
-
+        outputs[x0] += (1.-accept)*b;
+        outputs[x1] += accept*b;
 
         if (frand() < accept)
         {
             path_copy(p0, p1);
         }
 
-        if (i % 10000 == 0)
+        if (i % 1000 == 0)
         {
+            if (i % 10000 == 0)
+                printf("Iteration %d\n", i);
+
             for (int j = 0; j < N; j++)
-                cout << outputs[j]<< "\t";
-            cout << endl;
-            double d = 0;
-            
-            for (int j = 0; j < N; j++)
-                d += outputs[j];
-            cout << d/N << endl;
-        }
-
-
-/*        long double res = 0.;
-        long nrays = 0;
-        Vector3 origin(2.*(float)i/((float)N-1.)-1., 0, 0);
-        #pragma omp critical
-        {
-            cout << "Sampling at " << origin  << endl;
-        }
-        long k;
-        for (k = 1; k <= 10000000; ++k)
-        {
-            sample s = samplePath(origin);
-            if (s.hit)
-                res += s.value;
-            nrays += s.nrays;
-
-            //Division by 1/PI (or multiplying by PI) is neccesary because
-            //E(f/p)=F=1/n*sum(f/p) and p=1/PI (distribution of rays)
-            if (k % 1000 == 0)
             {
-                output << (k > 0 ? "\t" : "") << PI*(double)(res/((long double)k+1.));
-                if (k % 100000 == 0 && k > 0)
-                    cout << k+1 << "\t" << origin.x << "\t" << PI*(double)(res/((long double)k+1.)) << "\n";
+                fp << outputs[j]/(i+1)/(2./(float)N) << (j==N-1?"":"\t");
+                if (i % 10000 == 0)
+                {
+                    printf("%6.3f%s", outputs[j]/(i+1)/(2./(float)N), j==N-1?"":"\t");
+                }
             }
+            fp << "\n";
+
+            if (i % 10000 == 0)
+                printf("\n");
         }
-        outputs[origin.x] = output.str();*/
     }
+    fp.close();
 }
