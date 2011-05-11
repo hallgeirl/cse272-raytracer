@@ -19,6 +19,8 @@ typedef std::vector<HitPoint*> HitPoints;
 HitPoints m_hitpoints;
 
 using namespace std;
+using std::min;
+using std::max;
 
 
 void 
@@ -236,6 +238,10 @@ bool SamplePhotonPath(const Ray& path, const Vector3& power)
     {
         if (g_scene->trace(hitInfo, ray, 0, MIRO_TMAX))
         {
+			//return if hit triangle backface
+			if (dot(ray.d, hitInfo.N) > 0)
+				return false;
+
             //hit diffuse surface->we're done
             if (!hitInfo.material->isReflective())
             {
@@ -323,7 +329,7 @@ void a2task2()
 	{
 		HitPoint *hp = (*g_scene->hitpoints())[n];
 		
-		fp << (double)hp->accFlux / PI / pow(hp->radius, 2) / g_scene->GetPhotonsEmitted() << "\t" << hp->position.x << endl;
+		fp << (double)hp->accFlux / PI / pow(hp->radius, 2) / (float)g_scene->GetPhotonsEmitted() << "\t" << hp->position.x << endl;
 	}
 	fp.close();
 
@@ -341,6 +347,7 @@ void a2task3()
 	float prev_ai = 0;
 	float mutated = 1;
 	float accepted = 0;
+	float uniform = 0;
 
 	do
 	{
@@ -361,6 +368,7 @@ void a2task3()
 		if (SamplePhotonPath(path, power))
 		{
 			goodPath = path;
+			++uniform;
 			continue;
 		}
 
@@ -368,10 +376,14 @@ void a2task3()
 		float di = prev_di + (1.f / mutated) * (prev_ai - 0.234);
 		float dui = ((2 * frand() - 1) > 0 ? 1 : -1) * pow(frand(), (1/di)+1); 
 		++mutated;
+
+		//faking mutation for now
 		path.d = goodPath.d + dui;
+		path.o.x = max<float>(min<float>(goodPath.o.x + dui, 1.75), -1.75);
 		path.d.normalize();
+
 		prev_di = di;
-		prev_ai += ((float)accepted/(float)mutated - 0.234) / (float)mutated;
+		prev_ai += (accepted/mutated - 0.234) / mutated;
 		
 		if (SamplePhotonPath(path, power))
 		{
@@ -385,7 +397,7 @@ void a2task3()
 	{
 		HitPoint *hp = (*g_scene->hitpoints())[n];
 
-		float result = (double)hp->accFlux / PI / pow(hp->radius, 2) / m_photonsEmitted;
+		float result = (double)hp->accFlux / PI / pow(hp->radius, 2) / (float)m_photonsEmitted;
 		
 		fp << result << "\t" << hp->position.x << endl;
 	}

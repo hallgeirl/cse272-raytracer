@@ -155,8 +155,8 @@ Triangle::intersect(HitInfo& result, const Ray& r,float tMin, float tMax)
     float ddotn = (dot(-r.d, normal));
 
 	// prevent back-face intersection
-	if (!m_material->isRefractive() && ddotn < 0)
-		return false;
+	//if (!m_material->isRefractive() && ddotn < 0)
+		//return false;
 
     float t = dot(r.o-A, normal) / ddotn;
     float beta = dot(-r.d, cross(r.o-A, CmA)) / ddotn;
