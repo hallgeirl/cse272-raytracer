@@ -13,6 +13,8 @@ PLOTS=$(patsubst %.p,%.pdf,$(shell ls *.p))
 
 CXXFLAGS += -DLINUX
 
+assignment2.cpp: assignment2.h
+
 # 
 # lexer.cpp: lexer.lex
 # 	$(ECHO) "Flex-ing lexer.lex"
