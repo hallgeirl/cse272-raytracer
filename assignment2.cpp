@@ -130,8 +130,6 @@ makeTask2Scene()
 	}
 }
 
-
-
 sample samplePath(const Vector3& origin, const Vector3& direction)
 {
     sample out;
