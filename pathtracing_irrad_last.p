@@ -3,16 +3,13 @@ set   autoscale                        # scale axes automatically
 unset log                              # remove any log-scaling
 unset label                            # remove any previous labels
 set ytic auto                          # set ytics automatically
-set title "Irradiance estimate using path tracing"
-set xlabel "Samples (x1000)"
-set ylabel "X"
-set zlabel "Irradiance"
-
-set ytics ("-1" 0, "-0.5" 25, "0" 50, "0.5" 75, "1" 100)
+set title "Irradiance estimate using path tracing (last iteration)"
+set xlabel "X"
+set ylabel "Irradiance"
 
 #set pm3d
 #set dgrid3d 100,100,2
 set grid
-set view 45,15
+set yrange [0:0.8]
 
-splot "irrad_pathtracing.dat" matrix every 10:1 with lines lw 0.1 lc rgb "black" title ""
+plot "pathtracing_irrad.dat" using 10000 with lines lc rgb "black" title ""
