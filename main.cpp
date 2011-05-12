@@ -25,7 +25,7 @@ int
 main(int argc, char*argv[])
 {
     setup();
-    srand(time(0));
+//    srand(time(0));
     //Initialize FreeImage
 #ifndef NO_FREEIMAGE
     FreeImage_Initialise();
@@ -74,9 +74,9 @@ else
     cout << "Alternative tasks" << endl;
 	makeTask2Scene();
 //    a2task1();
-/*    a2task2();
-    a2task3();*/
-    a2task4();
+    a2task2();
+    //a2task3();
+    //a2task4();
 }
 
 #ifndef NO_FREEIMAGE

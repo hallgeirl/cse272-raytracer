@@ -100,7 +100,7 @@ public:
         else
         {
             m_tangent1.normalize();
-            m_tangent2 = cross(m_normal, m_tangent1);
+            m_tangent2 = cross(m_tangent1, m_normal);
             if (std::abs(dot(m_tangent1, m_normal)) > 1e-5)
             {
                 std::cerr << "Warning (SquareLight): Chosen u-tangent not perpendicular to normal. Correcting." << std::endl;

@@ -14,14 +14,18 @@
 
 SquareLight* g_l;
 
+// initialize measurement points from A to B 
+typedef std::vector<HitPoint*> HitPoints;
+HitPoints m_hitpoints;
+
 using namespace std;
+using std::min;
+using std::max;
 
 
 void 
 makeTask2Scene()
 {
-    Material* m;
-
     g_image->resize(512, 512);
 
     // set up the camera
@@ -64,8 +68,8 @@ makeTask2Scene()
 	TriangleMesh * mirror2 = new TriangleMesh;
     mirror2->createSingleTriangle();
     mirror2->setV1(Vector3( -2, 1, -2));
-    mirror2->setV2(Vector3( -2, 1, 2));
-    mirror2->setV3(Vector3( 2, 1, 2));
+    mirror2->setV2(Vector3( 2, 1, 2));
+    mirror2->setV3(Vector3( -2, 1, 2));
     mirror2->setN1(Vector3(0, -1, 0));
     mirror2->setN2(Vector3(0, -1, 0));
     mirror2->setN3(Vector3(0, -1, 0));
@@ -80,8 +84,8 @@ makeTask2Scene()
     TriangleMesh * square1 = new TriangleMesh;
     square1->createSingleTriangle();
     square1->setV1(Vector3( -1, 0, -1));
-    square1->setV2(Vector3( 1, 0, -1));
-    square1->setV3(Vector3( 1, 0, 1));
+    square1->setV2(Vector3( 1, 0, 1));
+    square1->setV3(Vector3( 1, 0, -1));
     square1->setN1(Vector3(0, 1, 0));
     square1->setN2(Vector3(0, 1, 0));
     square1->setN3(Vector3(0, 1, 0));
@@ -89,7 +93,7 @@ makeTask2Scene()
     t = new Triangle;
     t->setIndex(0);
     t->setMesh(square1);
-    t->setMaterial(new Phong(Vector3(0), Vector3(0))); 
+    t->setMaterial(new Phong(Vector3(1), Vector3(0))); 
     g_scene->addObject(t);
 
 	TriangleMesh * square2 = new TriangleMesh;
@@ -104,13 +108,29 @@ makeTask2Scene()
     t2 = new Triangle;
     t2->setIndex(0);
     t2->setMesh(square2);
-    t2->setMaterial(new Phong(Vector3(0), Vector3(0))); 
+    t2->setMaterial(new Phong(Vector3(1), Vector3(0))); 
     g_scene->addObject(t2);
 
     g_scene->preCalc();
+
+	// initialize measurement points from A to B 
+	// might be issue with radii large than floor
+	HitPoint *hp;
+	float delta = 0.02;
+	
+	for (float i = -0.99; i < 1; i+=delta)
+	{
+		hp = new HitPoint;
+		hp->position = Vector3(i, 0.f, 0.f);
+		hp->normal = Vector3(0, 1, 0);
+		hp->radius = 0.25f;
+
+		// for task 2
+		g_scene->addHitPoint(hp);
+		// for task 3
+		m_hitpoints.push_back(hp);
+	}
 }
-
-
 
 sample samplePath(const Vector3& origin, const Vector3& direction)
 {
@@ -162,6 +182,83 @@ sample samplePath(const Vector3& origin)
     //Path trace
     Ray ray = ray.diffuse(hitInfo);
     return samplePath(origin, ray.d);
+}
+
+bool UpdateMeasurementPoints(const Vector3& pos, const Vector3& power)
+{
+	bool hit = false;
+
+	for (int n = 0; n < m_hitpoints.size(); ++n)
+	{
+		HitPoint *hp = m_hitpoints[n];
+		float d = sqrt(pow(pos.x - hp->position.x, 2) +
+			pow(pos.y - hp->position.y, 2) +
+			pow(pos.z - hp->position.z, 2));
+
+		if (d <= hp->radius)
+		{
+			//wait to update radius and flux
+			hp->newPhotons++;
+			hp->newFlux += power.x;
+
+			// can hit multiple measurement points	
+			hit = true;
+		}
+	}
+	return hit;
+}
+
+void UpdatePhotonStats()
+{
+	for (int n = 0; n < m_hitpoints.size(); ++n)
+	{
+		HitPoint *hp = m_hitpoints[n];
+		
+		// only adding a ratio of the newly added photons
+		float delta = (hp->accPhotons + PHOTON_ALPHA * hp->newPhotons)/(hp->accPhotons + hp->newPhotons);
+		hp->radius *= sqrt(delta);
+		hp->accPhotons += (int)(PHOTON_ALPHA * hp->newPhotons);
+		
+		// not sure about this flux acc, or about calculating the irradiance
+		hp->accFlux = ( hp->accFlux + hp->newFlux) * delta;	
+
+		// reset new values
+		hp->newPhotons = 0;
+		hp->newFlux = 0.f;
+	}
+}
+
+bool SamplePhotonPath(const Ray& path, const Vector3& power)
+{
+    HitInfo hitInfo(0, path.o, Vector3(0,1,0));
+
+	Ray ray(path.o, path.d);
+
+    while (true)
+    {
+        if (g_scene->trace(hitInfo, ray, 0, MIRO_TMAX))
+        {
+			//return if hit triangle backface
+			if (dot(ray.d, hitInfo.N) > 0)
+				return false;
+
+            //hit diffuse surface->we're done
+            if (!hitInfo.material->isReflective())
+            {
+                return UpdateMeasurementPoints(hitInfo.P, power);
+            }
+            //hit reflective surface => reflect and trace again
+            else 
+            {
+                ray = ray.reflect(hitInfo);
+            }
+        }
+        //Missed the scene
+        else 
+        {
+            return false;
+        }
+    }
 }
 
 void a2task1()
@@ -219,80 +316,92 @@ void a2task1()
 void a2task2()
 {
     cout << "Photon mapping" << endl;
-	HitPoint *hp = new HitPoint;
-	hp->position = Vector3(0.f);
-	hp->normal = Vector3(0, 1, 0);
-	hp->radius = 0.25f;
 
-	g_scene->addHitPoint(hp);
+	ofstream fp("irrad_progphotonmapping.dat");
 
-	FILE *fp;
-	fp = fopen("irrad_progphotonmapping.dat", "w");
-
-	while (g_scene->GetPhotonsEmitted() < 100000000)
+	while (g_scene->GetPhotonsEmitted() < 1000000)
 	{
 		g_scene->ProgressivePhotonPass();
-
-		printf("%ld %lf %lf %d \n", g_scene->GetPhotonsEmitted(), (double)hp->accFlux / PI / pow(hp->radius, 2) / g_scene->GetPhotonsEmitted(), hp->radius, hp->accPhotons);
-		fprintf(fp, "%ld %lf %lf %d \n", g_scene->GetPhotonsEmitted(), (double)hp->accFlux / PI / pow(hp->radius, 2) / g_scene->GetPhotonsEmitted(), hp->radius, hp->accPhotons);
+		//printf("%ld %lf %lf %d \n", g_scene->GetPhotonsEmitted(), (double)hp->accFlux / PI / pow(hp->radius, 2) / g_scene->GetPhotonsEmitted(), hp->radius, hp->accPhotons);
 	}
-	fclose(fp);
+
+	for (int n = 0; n < g_scene->hitpoints()->size(); ++n)
+	{
+		HitPoint *hp = (*g_scene->hitpoints())[n];
+		
+		fp << (double)hp->accFlux / PI / pow(hp->radius, 2) / (float)g_scene->GetPhotonsEmitted() << "\t" << hp->position.x << endl;
+	}
+	fp.close();
 
 }
 
 void a2task3()
 {
-	Vector3 shadeResult(0);
+    ofstream fp("irrad_adaptiveppm.dat");
 
-    ofstream fp("irrad_importance.dat");
+	//find starting good path
+    Vector3 power = g_l->color() * g_l->wattage(); 
+	Ray goodPath;
+	int m_photonsEmitted;
+	float prev_di = 1;
+	float prev_ai = 0;
+	float mutated = 1;
+	float accepted = 0;
+	float uniform = 0;
 
-    vector<samples> allsamples;
-    allsamples.push_back(samples());
-    allsamples.push_back(samples());
-
-    samples& directSamples = allsamples[0],
-           & pathTraceSamples = allsamples[1];
-
-    //we take direct samples of the light source distributed over the area
-    directSamples.p = 1./4;
-    directSamples.isAreaSample = true;
-
-    //path trace samples are taken using diffuse rays, that is, with a distribution of 1/PI
-    pathTraceSamples.p = 1./PI;
-    pathTraceSamples.isAreaSample = false;
-
-    //Take samples
-    double indirect = 0;
-    long nrays = 0;
-    long print = -1;
-
-    for (long k = 0; nrays < 1100000; ++k)
+	do
 	{
-		if (nrays >= print)
-        {
-            //double bh = balanceHeuristic(allsamples) + indirect/(k+1);
-            double bh = 1;
-            cout << nrays << " " << bh << endl;
-            fp << nrays << " " << bh << "\n";
-            print += 1000;
-        }
+        goodPath.o = g_l->samplePhotonOrigin();
+        goodPath.d = g_l->samplePhotonDirection();
+	} while (!SamplePhotonPath(goodPath, power));
 
-        sample s = samplePath(Vector3(0,0,0));
-        nrays += s.nrays;
+	for (m_photonsEmitted = 0; m_photonsEmitted < 10000000; m_photonsEmitted++)
+    {
+		if ((m_photonsEmitted + 1)% 1000000 == 0)
+		{
+			UpdatePhotonStats();
+			printf("Update Photon Stats %f percent \n", (float)m_photonsEmitted/(float)10000000);
+		} 
 
-        //we only want to importance sample the direct lighting
-        if (s.hit && s.direct)
-            pathTraceSamples.X[k] = s;
-        else if (s.hit)
-            indirect += s.value*PI;
+        //Test new random photon
+        Ray path(g_l->samplePhotonOrigin(), g_l->samplePhotonDirection());
+		if (SamplePhotonPath(path, power))
+		{
+			goodPath = path;
+			++uniform;
+			continue;
+		}
 
-        pathTraceSamples.n++;
+		//Mutate path
+		float di = prev_di + (1.f / mutated) * (prev_ai - 0.234);
+		float dui = ((2 * frand() - 1) > 0 ? 1 : -1) * pow(frand(), (1/di)+1); 
+		++mutated;
 
-        //Sample light source
-//        directSamples.X[k] = sampleLightSource();
-        directSamples.n++;
-        nrays += directSamples.X[k].nrays;
+		//faking mutation for now
+		path.d = goodPath.d + dui;
+		path.o.x = max<float>(min<float>(goodPath.o.x + dui, 1.75), -1.75);
+		path.d.normalize();
+
+		prev_di = di;
+		prev_ai += (accepted/mutated - 0.234) / mutated;
+		
+		if (SamplePhotonPath(path, power))
+		{
+			goodPath = path;
+			++accepted;
+			continue;
+		}
+    }
+
+	for (int n = 0; n < g_scene->hitpoints()->size(); ++n)
+	{
+		HitPoint *hp = (*g_scene->hitpoints())[n];
+
+		float result = (double)hp->accFlux / PI / pow(hp->radius, 2) / (float)m_photonsEmitted;
+		
+		fp << result << "\t" << hp->position.x << endl;
 	}
+
     fp.close();
 }
 

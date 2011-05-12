@@ -638,6 +638,8 @@ int Scene::tracePhoton(const Vector3& position, const Vector3& direction, const 
 #ifdef STATS
 			Stats::Photon_Bounces++;
 #endif
+			// only one bounce for Assignment 2 -- task 2
+			return nPhotons;
             //Shoot out a new diffuse photon
             Ray r = ray.diffuse(hit);
             HitInfo diffHit;
