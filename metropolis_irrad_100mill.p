@@ -3,7 +3,7 @@ set   autoscale                        # scale axes automatically
 unset log                              # remove any log-scaling
 unset label                            # remove any previous labels
 set ytic auto                          # set ytics automatically
-set title "Irradiance, Metropolis path tracing at 1 mill. samples"
+set title "Irradiance, Metropolis path tracing at 100 mill. samples"
 set xlabel "X"
 set ylabel "Irradiance (W/m^2)"
 

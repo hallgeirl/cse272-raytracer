@@ -5,7 +5,7 @@ unset label                            # remove any previous labels
 set ytic auto                          # set ytics automatically
 set title "Irradiance estimate using path tracing"
 set xlabel "Samples (x1000)"
-set ylabel "X"
+set ylabel "Measurement point"
 set zlabel "Irradiance"
 
 set ytics ("-1" 0, "-0.5" 25, "0" 50, "0.5" 75, "1" 100)

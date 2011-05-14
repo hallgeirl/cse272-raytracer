@@ -3,7 +3,7 @@ set   autoscale                        # scale axes automatically
 unset log                              # remove any log-scaling
 unset label                            # remove any previous labels
 set ytic auto                          # set ytics automatically
-set title "Irradiance estimate using path tracing (last iteration)"
+set title "Irradiance estimate using path tracing (after 100 million rays)"
 set xlabel "Measurement point"
 set ylabel "Irradiance"
 
@@ -12,4 +12,4 @@ set ylabel "Irradiance"
 set grid
 set yrange [0:0.8]
 
-plot "pathtracing_irrad.dat" using 10000 with lines lc rgb "black" title ""
+plot "pathtracing_irrad.dat" using 1000 with lines lc rgb "black" title ""
