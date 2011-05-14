@@ -37,7 +37,9 @@ main(int argc, char*argv[])
 #ifdef OPENMP
     cout << "Using OpenMP with up to " << omp_get_max_threads() << " threads." << endl;
 #endif
-
+#ifdef LINUX
+    srand48(time(0));
+#endif
 //mode = 0: Create opengl window and everything
 //mode = 1: Render scenes without any GUI
 //mode = 2: Other things

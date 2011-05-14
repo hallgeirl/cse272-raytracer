@@ -267,7 +267,7 @@ void a2task1()
 	HitInfo hitInfo(0, Vector3(0, epsilon, 0), Vector3(0,1,0));
 	Vector3 shadeResult(0);
 
-	ofstream fp("irrad_pathtracing.dat");
+	ofstream fp("pathtracing_irrad.dat");
     int N = 100;
 
     map<double, string> outputs;
@@ -422,7 +422,9 @@ double mutate_value(double s1, double s2)
 void mutate_path(const path &p0, path &p1)
 {
     //Mutation magnitudes
-    double dpos = 0.2, dtheta = 0.1, dphi = 0.1;
+    double dpos = 1, dtheta = .125, dphi = .125;
+    double max_mutation = 1./64.;
+    double min_mutation = 1./2048.;
 
     if (frand() < p_large)
     {
@@ -432,30 +434,39 @@ void mutate_path(const path &p0, path &p1)
     }
     else
     {
-        static int n = 0;
-        n++;
-        static double tot =0;
-        tot += mutate_value(0., dpos);
+        bool mutated = false;
+        while (!mutated)
+        {
+            if (frand() < p_pos)
+            {
+                p1.u[0] = p0.u[0] + mutate_value(min_mutation, max_mutation) * dpos;
+                if (p1.u[0] > 1) p1.u[0] -= 2;
+                else if (p1.u[0] < -1) p1.u[0] += 2;
+                mutated = true;
+            }
+            else
+            {
+                p1.u[0] = p0.u[0];
+            }
 
-        p1.u[0] = p0.u[0] + mutate_value(0., dpos);
-        p1.u[1] = p0.u[1] + mutate_value(0., dtheta);
-        p1.u[2] = p0.u[2] + mutate_value(0., dphi);
+            if (frand() < p_angle)
+            {
+                p1.u[1] = p0.u[1] + mutate_value(min_mutation, max_mutation)*dtheta;
+                if (p1.u[1] < 0) p1.u[1] += 2.*PI;
+                else if (p1.u[1] > 2.*PI) p1.u[1] -= 2.*PI;
+
+                p1.u[2] = p0.u[2] + mutate_value(min_mutation, max_mutation)*dphi;
+                if (p1.u[2] > PI/2.) p1.u[2] -= PI/2.;
+                else if (p1.u[2] < 0) p1.u[2] += PI/2.;
+                mutated = true;
+            }
+            else
+            {
+                p1.u[1] = p0.u[1];
+                p1.u[2] = p0.u[2];
+            }
+        }
     }
-    //cout << mutate_value(u[0], 0.1, dpos) << endl;
-
-/*    u_out[0] = u[0] + (2.*dpos*frand()-dpos);
-    u_out[1] = u[1] + (2.*dtheta*frand()-dtheta); 
-    u_out[2] = u[2] + (2.*dphi*frand()-dphi);*/
-
-
-    if (p1.u[0] < -1) p1.u[0] = -1;
-    else if (p1.u[0] > 1) p1.u[0] = 1;
-
-    if (p1.u[1] < 0) p1.u[1] += 2.*PI;
-    else if (p1.u[1] > 2.*PI) p1.u[1] -= 2.*PI;
-
-    if (p1.u[2] < 0) p1.u[2] = 0;
-    else if (p1.u[2] > PI/2.) p1.u[2] = PI/2;
 }
 
 void a2task4()
@@ -464,18 +475,47 @@ void a2task4()
 	HitInfo hitInfo(0, Vector3(0, epsilon, 0), Vector3(0,1,0));
 	Vector3 shadeResult(0);
 
-	ofstream fp("irrad_metropolis.dat");
+    long double ptracing_output[100];
+    double ptracing_b = 0;
+
+    //Get path tracing results from last iteration
+    {
+        cout << "Loading path tracing results..." << endl;
+        char tmpbuf[100000];
+        ifstream fp_tmp("pathtracing_irrad.dat");
+        if (!fp_tmp.is_open())
+            memset(ptracing_output,0,sizeof(long double)*100);
+        else
+        {
+            int i = 0;
+
+            while (!fp_tmp.getline(tmpbuf,100000).eof())
+            {
+                stringstream ss(tmpbuf);
+                while (ss >> ptracing_output[i]) {}
+                ptracing_b += (double)ptracing_output[i];
+                i++;
+            }
+            fp_tmp.close();
+        }
+        ptracing_b /= 100;
+    }
+
+	ofstream fp_err("metropolis_msq.dat");
     const int N = 100; //Number of points
-    const int Nseeds = 1000000;
+    const int Nseeds = 10000000;
     const int Nsamples = 100000000;
 
     //Output irradiances for each point
     //There's N points distributed uniformly over the interval
-    double outputs[N];
+    long double outputs[N];
+    long double error[N];
 
-    memset(outputs, 0, sizeof(double)*N);
+    stringstream output_strings[N];
+    stringstream error_strings[N];
 
-    double I = 0;
+    memset(outputs, 0, sizeof(long double)*N);
+    memset(error, 0, sizeof(long double)*N);
 
     Vector3 surfaceNormal(0,1,0);
 
@@ -483,7 +523,7 @@ void a2task4()
 
     path p0;
     p0.I = 0;
-    double b = 0;
+    long double b = 0;
 
     //Generate path seeds
     for (int i = 0; i < Nseeds; i++)
@@ -501,7 +541,7 @@ void a2task4()
     
         if (s.hit && s.value > 0)
         {
-            b += s.value/(1./2.)*PI/dot(dir, surfaceNormal);
+            b += s.value*PI;
             if (p0.I < s.value)
             {
                 p0.I = s.value;
@@ -512,10 +552,10 @@ void a2task4()
 
     b /= Nseeds;
 
-    cout << "b=" << b << endl;
+    cout << "b=" << b << ", b_ptracing=" << ptracing_b << ", error=" << b/ptracing_b << endl;
     cout << "p0=" << p0.I << "; [" << p0.u[0] << ", " << p0.u[1] << ", " << p0.u[2] << "]" << endl;
 
-    for (int i = 1; i < Nsamples; i++)
+    for (int i = 1; i <= Nsamples; i++)
     {
         //Mutate path. 
         path p1;
@@ -526,38 +566,91 @@ void a2task4()
         if (!s.hit) s.value = 0;
         p1.I = s.value;
         
-        double accept = std::min(p1.I / p0.I, 1.);
-        int x0 = (int)(((p0.u[0]+1.)/2.)*N);
+        double accept;
         int x1 = (int)(((p1.u[0]+1.)/2.)*N);
+        int x0 = (int)(((p0.u[0]+1.)/2.)*N);
         if (x0 == N) x0--;
         if (x1 == N) x1--;
 
+        if (p1.u[0] >= -1 && p1.u[0] <= 1 && p1.u[2] >= 0 && p1.u[2] <= PI/2.)
+        {
+            accept = std::min(p1.I / p0.I, 1.);
+            outputs[x1] += accept*b;
+        }
+        else
+        {
+            accept = 0;
+        }
+
         outputs[x0] += (1.-accept)*b;
-        outputs[x1] += accept*b;
 
         if (frand() < accept)
         {
             path_copy(p0, p1);
         }
 
+        double msq = 0;
         if (i % 1000 == 0)
         {
-            if (i % 10000 == 0)
-                printf("Iteration %d\n", i);
 
             for (int j = 0; j < N; j++)
             {
-                fp << outputs[j]/(i+1)/(2./(float)N) << (j==N-1?"":"\t");
+                output_strings[j] << outputs[j]/(i+1)*(long double)N << " ";//(j==N-1?"":"\t");
+                long double err = (outputs[j]/(i+1)*(long double)N-ptracing_output[j]);
+                long double err_sq = err*err;
+                error[j] = err;
+
+                msq += err_sq;
+            }
+            msq /= N;
+
+            fp_err << i << " " << msq << "\n";
+        }
+
+        if (i % 10000 == 0)
+        {
+            printf("Iteration %d\n", i);
+            cout << "Error: " << endl;
+
+            for (int j = 0; j < N; j++)
+            {
+                long double err = error[j];
+                long double err_sq = err*err;
                 if (i % 10000 == 0)
                 {
-                    printf("%6.3f%s", outputs[j]/(i+1)/(2./(float)N), j==N-1?"":"\t");
+                     printf("%6.3Lf%s", err, j==N-1?"":"\t");
                 }
             }
-            fp << "\n";
 
-            if (i % 10000 == 0)
-                printf("\n");
+            cout << "\nMean square error: " << msq << "\n";
+            cout << "Error in b: " << b - ptracing_b << endl;
+        }
+
+        if (i == 1000000 || i == 100000000)
+        {
+            stringstream ss;
+            ss << "metropolis_error_" << i << ".dat";
+            
+            ofstream f_errorgraph(ss.str().c_str());
+            for (int j = 0; j < N; j++)
+            {
+                f_errorgraph << j+1 << " " << error[j] << "\n";
+            }
         }
     }
-    fp.close();
+
+    {
+        ofstream fp("metropolis_irrad.dat");
+        for (int i = 0; i < N; i++)
+        {
+            fp << output_strings[i].str() << "\n";
+        }
+        fp.close();
+    }
+
+    {
+        ofstream fp("metropolis_b.dat");
+        fp << "b=" << b << ", error (vs. pathtracing)=" << b-ptracing_b << "\n";
+        fp.close();
+    }
 }
