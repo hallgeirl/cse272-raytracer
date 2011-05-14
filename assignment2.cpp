@@ -116,14 +116,14 @@ makeTask2Scene()
 	// initialize measurement points from A to B 
 	// might be issue with radii large than floor
 	HitPoint *hp;
-	float delta = 0.016;
+	float delta = 0.02;
 	
-	for (float i = -0.8; i < 0.8; i+=delta)
+	for (float i = -1.0; i < 1.f; i+=delta)
 	{
 		hp = new HitPoint;
 		hp->position = Vector3(i, 0.f, 0.f);
 		hp->normal = Vector3(0, 1, 0);
-		hp->radius = 0.2f;
+		hp->radius = 0.25f;
 
 		// for task 2
 		g_scene->addHitPoint(hp);
@@ -182,6 +182,18 @@ sample samplePath(const Vector3& origin)
     //Path trace
     Ray ray = ray.diffuse(hitInfo);
     return samplePath(origin, ray.d);
+}
+
+float MutatePath(const float MutationSize)
+{
+	return ((2 * frand() - 1) > 0 ? 1 : -1) * pow(frand(), (1/MutationSize)+1);
+}
+
+float ApplyDeltaRange(const float delta, const float x1, const float x2)
+{
+	float range = (x2 - x1) / 2.f;
+	float midpoint = ((x2 + x1) / 2.f);
+	return delta * range + midpoint;
 }
 
 bool UpdateMeasurementPoints(const Vector3& pos, const Vector3& power)
@@ -317,7 +329,7 @@ void a2task2()
 {
     cout << "Photon mapping" << endl;
 
-	ofstream fp("irrad_progphotonmapping.dat");
+	ofstream fp("progphotonmapping_irrad.dat");
 
 	while (g_scene->GetPhotonsEmitted() < 1000000)
 	{
@@ -328,8 +340,11 @@ void a2task2()
 	for (int n = 0; n < g_scene->hitpoints()->size(); ++n)
 	{
 		HitPoint *hp = (*g_scene->hitpoints())[n];
+
+		float scale = min (CircleSegment(Vector3(-1,0,-1), Vector3(0,0,1), hp->radius, hp->position), 
+							CircleSegment(Vector3(1,0,-1), Vector3(0,0,1), hp->radius, hp->position));
 		
-		fp << (double)hp->accFlux / PI / pow(hp->radius, 2) / (float)g_scene->GetPhotonsEmitted() << "\t" << hp->position.x << endl;
+		fp << (double)hp->accFlux / PI / pow(hp->radius, 2) / (float)g_scene->GetPhotonsEmitted() / scale << "\t" << hp->position.x << endl;
 	}
 	fp.close();
 
@@ -344,7 +359,6 @@ void a2task3()
 	Ray goodPath;
 	int m_photonsEmitted;
 	float prev_di = 1;
-	float prev_ai = 0;
 	float mutated = 1;
 	float accepted = 0;
 	float uniform = 0;
@@ -373,17 +387,16 @@ void a2task3()
 		}
 
 		//Mutate path
-		float di = prev_di + (1.f / mutated) * (prev_ai - 0.234);
-		float dui = ((2 * frand() - 1) > 0 ? 1 : -1) * pow(frand(), (1/di)+1); 
-		++mutated;
-
-		//faking mutation for now
+		float di = prev_di + (1.f / mutated) * (accepted/mutated - 0.234);
+		float dui = MutatePath(di);
 		path.d = goodPath.d + dui;
-		path.o.x = max<float>(min<float>(goodPath.o.x + dui, 1.75), -1.75);
-		path.d.normalize();
+		//Vector3 test = alignHemisphereToVector(goodPath.d, ApplyDeltaRange(dui, 0.f, 2*PI), ApplyDeltaRange(dui, -PI/2.f, PI/2.f)); 
 
+		path.o.x = max<float>(min<float>(goodPath.o.x + ApplyDeltaRange(dui,-1.75, 1.75), 1.75), -1.75);
+		path.o.z = max<float>(min<float>(goodPath.o.z + ApplyDeltaRange(dui,-0.05, 0.05), 0.05), -0.05);
+
+		++mutated;
 		prev_di = di;
-		prev_ai = accepted/mutated;
 
 		if (SamplePhotonPath(path, power))
 		{

@@ -149,4 +149,35 @@ rotate(float angle, float x, float y, float z)
     return m;
 }
 
+inline float
+CircleSegment(const Vector3& rayOrigin, const Vector3& rayDir, const float radius, const Vector3 center)
+{
+    const Vector3 toO = rayOrigin - center;
+
+    const float a = rayDir.length2();
+    const float b = dot(2*rayDir, toO);
+    const float c = toO.length2() - radius*radius;
+
+    const float discrim = b*b-4.0f*a*c;
+
+    if (discrim < 0)
+        return 1.f;   // quadratic equation would yield imaginary numbers
+
+    const float sqrt_discrim = sqrt(discrim);
+
+    // solve the quadratic equation
+    const float t[2] = {(-b-sqrt_discrim)/(2.0f*a), (-b+sqrt_discrim)/(2.0f*a)};
+
+    // since we know that discrim >= 0, t[0] < t{1]
+    // return the t closest to us that is within range
+
+	Vector3 intersectP1 = rayOrigin + rayDir * t[0];
+	Vector3 intersectP2 = rayOrigin + rayDir * t[1];
+
+	float theta = acos(dot((intersectP1 - center).normalize(), (intersectP2 - center).normalize()));
+	float segArea = 0.5f * (theta - sin(theta)) * pow(radius, 2);
+
+	return 1.f - segArea / (PI * pow(radius, 2));
+}
+
 #endif
