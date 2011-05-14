@@ -116,14 +116,14 @@ makeTask2Scene()
 	// initialize measurement points from A to B 
 	// might be issue with radii large than floor
 	HitPoint *hp;
-	float delta = 0.02;
+	float delta = 0.016;
 	
-	for (float i = -0.99; i < 1; i+=delta)
+	for (float i = -0.8; i < 0.8; i+=delta)
 	{
 		hp = new HitPoint;
 		hp->position = Vector3(i, 0.f, 0.f);
 		hp->normal = Vector3(0, 1, 0);
-		hp->radius = 0.25f;
+		hp->radius = 0.2f;
 
 		// for task 2
 		g_scene->addHitPoint(hp);
@@ -337,7 +337,7 @@ void a2task2()
 
 void a2task3()
 {
-    ofstream fp("irrad_adaptiveppm.dat");
+    ofstream fp("adaptiveppm_irrad.dat");
 
 	//find starting good path
     Vector3 power = g_l->color() * g_l->wattage(); 
@@ -355,12 +355,12 @@ void a2task3()
         goodPath.d = g_l->samplePhotonDirection();
 	} while (!SamplePhotonPath(goodPath, power));
 
-	for (m_photonsEmitted = 0; m_photonsEmitted < 10000000; m_photonsEmitted++)
+	for (m_photonsEmitted = 0; m_photonsEmitted < 1000000; m_photonsEmitted++)
     {
-		if ((m_photonsEmitted + 1)% 1000000 == 0)
+		if ((m_photonsEmitted + 1)% 100000 == 0)
 		{
 			UpdatePhotonStats();
-			printf("Update Photon Stats %f percent \n", (float)m_photonsEmitted/(float)10000000);
+			printf("Update Photon Stats %f percent \n", (float)m_photonsEmitted/(float)1000000);
 		} 
 
         //Test new random photon
@@ -383,21 +383,23 @@ void a2task3()
 		path.d.normalize();
 
 		prev_di = di;
-		prev_ai += (accepted/mutated - 0.234) / mutated;
-		
+		prev_ai = accepted/mutated;
+
 		if (SamplePhotonPath(path, power))
 		{
 			goodPath = path;
 			++accepted;
 			continue;
 		}
+
+		SamplePhotonPath(goodPath, power);		
     }
 
 	for (int n = 0; n < g_scene->hitpoints()->size(); ++n)
 	{
 		HitPoint *hp = (*g_scene->hitpoints())[n];
 
-		float result = (double)hp->accFlux / PI / pow(hp->radius, 2) / (float)m_photonsEmitted;
+		float result = (double)hp->accFlux / PI / pow(hp->radius, 2) / (float)m_photonsEmitted * (uniform / (float)m_photonsEmitted);
 		
 		fp << result << "\t" << hp->position.x << endl;
 	}
