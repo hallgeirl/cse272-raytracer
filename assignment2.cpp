@@ -189,11 +189,17 @@ float MutatePath(const float MutationSize)
 	return ((2 * frand() - 1) > 0 ? 1 : -1) * pow(frand(), (1/MutationSize)+1);
 }
 
-float ApplyDeltaRange(const float delta, const float x1, const float x2)
+/*float ApplyDeltaRange(const float delta, const float x1, const float x2)
 {
 	float range = (x2 - x1) / 2.f;
 	float midpoint = ((x2 + x1) / 2.f);
 	return delta * range + midpoint;
+}*/
+
+float ApplyDeltaRange(const float delta, float value, const float x1, const float x2)
+{
+	float range = (x2 - x1) / 2.f;
+	return min<float>(max<float>(delta * range + value, x1), x2);
 }
 
 bool UpdateMeasurementPoints(const Vector3& pos, const Vector3& power)
@@ -331,7 +337,7 @@ void a2task2()
 
 	ofstream fp("progphotonmapping_irrad.dat");
 
-	while (g_scene->GetPhotonsEmitted() < 1000000)
+	while (g_scene->GetPhotonsEmitted() < 10000000)
 	{
 		g_scene->ProgressivePhotonPass();
 		//printf("%ld %lf %lf %d \n", g_scene->GetPhotonsEmitted(), (double)hp->accFlux / PI / pow(hp->radius, 2) / g_scene->GetPhotonsEmitted(), hp->radius, hp->accPhotons);
@@ -369,12 +375,12 @@ void a2task3()
         goodPath.d = g_l->samplePhotonDirection();
 	} while (!SamplePhotonPath(goodPath, power));
 
-	for (m_photonsEmitted = 0; m_photonsEmitted < 1000000; m_photonsEmitted++)
+	for (m_photonsEmitted = 0; m_photonsEmitted < 10000000; m_photonsEmitted++)
     {
 		if ((m_photonsEmitted + 1)% 100000 == 0)
 		{
 			UpdatePhotonStats();
-			printf("Update Photon Stats %f percent \n", (float)m_photonsEmitted/(float)1000000);
+			printf("Update Photon Stats %f percent \n", (float)m_photonsEmitted/(float)10000000);
 		} 
 
         //Test new random photon
@@ -389,11 +395,14 @@ void a2task3()
 		//Mutate path
 		float di = prev_di + (1.f / mutated) * (accepted/mutated - 0.234);
 		float dui = MutatePath(di);
-		path.d = goodPath.d + dui;
-		//Vector3 test = alignHemisphereToVector(goodPath.d, ApplyDeltaRange(dui, 0.f, 2*PI), ApplyDeltaRange(dui, -PI/2.f, PI/2.f)); 
+		//path.d = goodPath.d + dui;
+		float r = goodPath.d.length();
+		float theta = acos(goodPath.d.z / r);
+		float phi = atan(goodPath.d.y / goodPath.d.x);
+		path.d = alignHemisphereToVector(Vector3(0,1,0), ApplyDeltaRange(dui,theta, 0.f, 2*PI), ApplyDeltaRange(dui, phi, 0, PI/2.f)); 
 
-		path.o.x = max<float>(min<float>(goodPath.o.x + ApplyDeltaRange(dui,-1.75, 1.75), 1.75), -1.75);
-		path.o.z = max<float>(min<float>(goodPath.o.z + ApplyDeltaRange(dui,-0.05, 0.05), 0.05), -0.05);
+		path.o.x = ApplyDeltaRange(dui, goodPath.o.x, -1.75, 1.75);
+		path.o.z = ApplyDeltaRange(dui, goodPath.o.z, -0.05, 0.05);
 
 		++mutated;
 		prev_di = di;
@@ -412,7 +421,10 @@ void a2task3()
 	{
 		HitPoint *hp = (*g_scene->hitpoints())[n];
 
-		float result = (double)hp->accFlux / PI / pow(hp->radius, 2) / (float)m_photonsEmitted * (uniform / (float)m_photonsEmitted);
+		float scale = min (CircleSegment(Vector3(-1,0,-1), Vector3(0,0,1), hp->radius, hp->position), 
+							CircleSegment(Vector3(1,0,-1), Vector3(0,0,1), hp->radius, hp->position));
+
+		float result = (double)hp->accFlux / PI / pow(hp->radius, 2) / (float)m_photonsEmitted * (uniform / (float)m_photonsEmitted) / scale;
 		
 		fp << result << "\t" << hp->position.x << endl;
 	}
