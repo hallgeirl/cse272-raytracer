@@ -14,10 +14,6 @@
 
 SquareLight* g_l;
 
-// initialize measurement points from A to B 
-typedef std::vector<HitPoint*> HitPoints;
-HitPoints m_hitpoints;
-
 using namespace std;
 using std::min;
 using std::max;
@@ -116,19 +112,17 @@ makeTask2Scene()
 	// initialize measurement points from A to B 
 	// might be issue with radii large than floor
 	HitPoint *hp;
-	float delta = 0.02;
+	int N = 100;
 	
-	for (float i = -1.0; i < 1.f; i+=delta)
+	for (int i = 0; i < N; ++i)
 	{
 		hp = new HitPoint;
-		hp->position = Vector3(i, 0.f, 0.f);
+		hp->position = Vector3(2.*(float)i/((float)N-1.)-1., 0.f, 0.f);
 		hp->normal = Vector3(0, 1, 0);
 		hp->radius = 0.25f;
 
 		// for task 2
 		g_scene->addHitPoint(hp);
-		// for task 3
-		m_hitpoints.push_back(hp);
 	}
 }
 
@@ -189,13 +183,6 @@ float MutatePath(const float MutationSize)
 	return ((2 * frand() - 1) > 0 ? 1 : -1) * pow(frand(), (1/MutationSize)+1);
 }
 
-/*float ApplyDeltaRange(const float delta, const float x1, const float x2)
-{
-	float range = (x2 - x1) / 2.f;
-	float midpoint = ((x2 + x1) / 2.f);
-	return delta * range + midpoint;
-}*/
-
 float ApplyDeltaRange(const float delta, float value, const float x1, const float x2)
 {
 	float range = (x2 - x1) / 2.f;
@@ -206,9 +193,9 @@ bool UpdateMeasurementPoints(const Vector3& pos, const Vector3& power)
 {
 	bool hit = false;
 
-	for (int n = 0; n < m_hitpoints.size(); ++n)
+	for (int n = 0; n <  g_scene->hitpoints()->size(); ++n)
 	{
-		HitPoint *hp = m_hitpoints[n];
+		HitPoint *hp = (*g_scene->hitpoints())[n];
 		float d = sqrt(pow(pos.x - hp->position.x, 2) +
 			pow(pos.y - hp->position.y, 2) +
 			pow(pos.z - hp->position.z, 2));
@@ -228,9 +215,9 @@ bool UpdateMeasurementPoints(const Vector3& pos, const Vector3& power)
 
 void UpdatePhotonStats()
 {
-	for (int n = 0; n < m_hitpoints.size(); ++n)
+	for (int n = 0; n < g_scene->hitpoints()->size(); ++n)
 	{
-		HitPoint *hp = m_hitpoints[n];
+		HitPoint *hp = (*g_scene->hitpoints())[n];
 		
 		// only adding a ratio of the newly added photons
 		float delta = (hp->accPhotons + PHOTON_ALPHA * hp->newPhotons)/(hp->accPhotons + hp->newPhotons);
@@ -244,6 +231,22 @@ void UpdatePhotonStats()
 		hp->newPhotons = 0;
 		hp->newFlux = 0.f;
 	}
+}
+
+void PrintPhotonStats(ofstream& fp, const float photonsEmitted, const float uniform)
+{
+	for (int n = 0; n <  g_scene->hitpoints()->size(); ++n)
+	{
+		HitPoint *hp = (*g_scene->hitpoints())[n];
+
+		float scale = min (CircleSegment(Vector3(-1,0,-1), Vector3(0,0,1), hp->radius, hp->position), 
+							CircleSegment(Vector3(1,0,-1), Vector3(0,0,1), hp->radius, hp->position));
+
+		float result = (double)hp->accFlux / PI / pow(hp->radius, 2) / (float)photonsEmitted * (uniform / (float)photonsEmitted) / scale;
+		
+		fp << result << ",";
+	}
+	fp << endl;
 }
 
 bool SamplePhotonPath(const Ray& path, const Vector3& power)
@@ -337,21 +340,23 @@ void a2task2()
 
 	ofstream fp("progphotonmapping_irrad.dat");
 
-	while (g_scene->GetPhotonsEmitted() < 10000000)
+	while (g_scene->GetPhotonsEmitted() < 100000000)
 	{
 		g_scene->ProgressivePhotonPass();
 		//printf("%ld %lf %lf %d \n", g_scene->GetPhotonsEmitted(), (double)hp->accFlux / PI / pow(hp->radius, 2) / g_scene->GetPhotonsEmitted(), hp->radius, hp->accPhotons);
+		for (int n = 0; n < g_scene->hitpoints()->size(); ++n)
+		{
+			HitPoint *hp = (*g_scene->hitpoints())[n];
+
+			float scale = min (CircleSegment(Vector3(-1,0,-1), Vector3(0,0,1), hp->radius, hp->position), 
+								CircleSegment(Vector3(1,0,-1), Vector3(0,0,1), hp->radius, hp->position));
+			
+			fp << (double)hp->accFlux / PI / pow(hp->radius, 2) / (float)g_scene->GetPhotonsEmitted() / scale << ",";
+		}
+		fp << endl;
 	}
 
-	for (int n = 0; n < g_scene->hitpoints()->size(); ++n)
-	{
-		HitPoint *hp = (*g_scene->hitpoints())[n];
 
-		float scale = min (CircleSegment(Vector3(-1,0,-1), Vector3(0,0,1), hp->radius, hp->position), 
-							CircleSegment(Vector3(1,0,-1), Vector3(0,0,1), hp->radius, hp->position));
-		
-		fp << (double)hp->accFlux / PI / pow(hp->radius, 2) / (float)g_scene->GetPhotonsEmitted() / scale << "\t" << hp->position.x << endl;
-	}
 	fp.close();
 
 }
@@ -377,13 +382,13 @@ void a2task3()
 
 	for (m_photonsEmitted = 0; m_photonsEmitted < 10000000; m_photonsEmitted++)
     {
-		if ((m_photonsEmitted + 1)% 100000 == 0)
+		if (m_photonsEmitted > 0 && m_photonsEmitted % 100000 == 0)
 		{
 			UpdatePhotonStats();
-			printf("Update Photon Stats %f percent \n", (float)m_photonsEmitted/(float)10000000);
-		} 
+			PrintPhotonStats(fp, m_photonsEmitted, uniform);
+		}
 
-        //Test new random photon
+        //Test random photon path
         Ray path(g_l->samplePhotonOrigin(), g_l->samplePhotonDirection());
 		if (SamplePhotonPath(path, power))
 		{
@@ -392,13 +397,19 @@ void a2task3()
 			continue;
 		}
 
-		//Mutate path
+		//Mutatation size
 		float di = prev_di + (1.f / mutated) * (accepted/mutated - 0.234);
 		float dui = MutatePath(di);
+
+		// Initial path mutation
 		//path.d = goodPath.d + dui;
+
+		// Convert to spherical coords
 		float r = goodPath.d.length();
 		float theta = acos(goodPath.d.z / r);
 		float phi = atan(goodPath.d.y / goodPath.d.x);
+
+		// add mutation and convert back to cartesian coords
 		path.d = alignHemisphereToVector(Vector3(0,1,0), ApplyDeltaRange(dui,theta, 0.f, 2*PI), ApplyDeltaRange(dui, phi, 0, PI/2.f)); 
 
 		path.o.x = ApplyDeltaRange(dui, goodPath.o.x, -1.75, 1.75);
@@ -407,6 +418,7 @@ void a2task3()
 		++mutated;
 		prev_di = di;
 
+		// Test mutated photon path
 		if (SamplePhotonPath(path, power))
 		{
 			goodPath = path;
@@ -414,20 +426,11 @@ void a2task3()
 			continue;
 		}
 
+		// Reuse good path
 		SamplePhotonPath(goodPath, power);		
     }
 
-	for (int n = 0; n < g_scene->hitpoints()->size(); ++n)
-	{
-		HitPoint *hp = (*g_scene->hitpoints())[n];
-
-		float scale = min (CircleSegment(Vector3(-1,0,-1), Vector3(0,0,1), hp->radius, hp->position), 
-							CircleSegment(Vector3(1,0,-1), Vector3(0,0,1), hp->radius, hp->position));
-
-		float result = (double)hp->accFlux / PI / pow(hp->radius, 2) / (float)m_photonsEmitted * (uniform / (float)m_photonsEmitted) / scale;
-		
-		fp << result << "\t" << hp->position.x << endl;
-	}
+	PrintPhotonStats(fp, m_photonsEmitted, uniform);
 
     fp.close();
 }
