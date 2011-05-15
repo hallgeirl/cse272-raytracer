@@ -239,10 +239,11 @@ void PrintPhotonStats(ofstream& fp, const float photonsEmitted, const float unif
 	{
 		HitPoint *hp = (*g_scene->hitpoints())[n];
 
-		float scale = min (CircleSegment(Vector3(-1,0,-1), Vector3(0,0,1), hp->radius, hp->position), 
-							CircleSegment(Vector3(1,0,-1), Vector3(0,0,1), hp->radius, hp->position));
+		float A = PI * pow(hp->radius, 2);
+		CircleSegment(Vector3(-1,0,-1), Vector3(0,0,1), hp->radius, hp->position, A);
+		CircleSegment(Vector3(1,0,-1), Vector3(0,0,1), hp->radius, hp->position, A);
 
-		float result = (double)hp->accFlux / PI / pow(hp->radius, 2) / (float)photonsEmitted * (uniform / (float)photonsEmitted) / scale;
+		float result = (double)hp->accFlux / A / (float)photonsEmitted * (uniform / (float)photonsEmitted);
 		
 		fp << result << ",";
 	}
@@ -340,7 +341,7 @@ void a2task2()
 
 	ofstream fp("progphotonmapping_irrad.dat");
 
-	while (g_scene->GetPhotonsEmitted() < 100000000)
+	while (g_scene->GetPhotonsEmitted() < 10000000)
 	{
 		g_scene->ProgressivePhotonPass();
 		//printf("%ld %lf %lf %d \n", g_scene->GetPhotonsEmitted(), (double)hp->accFlux / PI / pow(hp->radius, 2) / g_scene->GetPhotonsEmitted(), hp->radius, hp->accPhotons);
@@ -348,10 +349,12 @@ void a2task2()
 		{
 			HitPoint *hp = (*g_scene->hitpoints())[n];
 
-			float scale = min (CircleSegment(Vector3(-1,0,-1), Vector3(0,0,1), hp->radius, hp->position), 
-								CircleSegment(Vector3(1,0,-1), Vector3(0,0,1), hp->radius, hp->position));
+			float A = PI * pow(hp->radius, 2);
+
+			CircleSegment(Vector3(-1,0,-1), Vector3(0,0,1), hp->radius, hp->position, A); 
+			CircleSegment(Vector3(1,0,-1), Vector3(0,0,1), hp->radius, hp->position, A);
 			
-			fp << (double)hp->accFlux / PI / pow(hp->radius, 2) / (float)g_scene->GetPhotonsEmitted() / scale << ",";
+			fp << (double)hp->accFlux / A / (float)g_scene->GetPhotonsEmitted() << ",";
 		}
 		fp << endl;
 	}

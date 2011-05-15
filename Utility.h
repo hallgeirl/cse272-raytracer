@@ -149,8 +149,8 @@ rotate(float angle, float x, float y, float z)
     return m;
 }
 
-inline float
-CircleSegment(const Vector3& rayOrigin, const Vector3& rayDir, const float radius, const Vector3 center)
+inline bool
+CircleSegment(const Vector3& rayOrigin, const Vector3& rayDir, const float radius, const Vector3& center, float& area)
 {
     const Vector3 toO = rayOrigin - center;
 
@@ -161,7 +161,7 @@ CircleSegment(const Vector3& rayOrigin, const Vector3& rayDir, const float radiu
     const float discrim = b*b-4.0f*a*c;
 
     if (discrim < 0)
-        return 1.f;   // quadratic equation would yield imaginary numbers
+        return false;   // quadratic equation would yield imaginary numbers
 
     const float sqrt_discrim = sqrt(discrim);
 
@@ -177,7 +177,8 @@ CircleSegment(const Vector3& rayOrigin, const Vector3& rayDir, const float radiu
 	float theta = acos(dot((intersectP1 - center).normalize(), (intersectP2 - center).normalize()));
 	float segArea = 0.5f * (theta - sin(theta)) * pow(radius, 2);
 
-	return 1.f - segArea / (PI * pow(radius, 2));
+	area = (PI * pow(radius, 2)) - segArea;
+	return true;
 }
 
 #endif
