@@ -46,6 +46,7 @@ freeimage:
 	mv lib/src/FreeImage/Dist/libfreeimage.a lib/lib/libfreeimage.a
 
 plots: $(PLOTS)
+	cp *.pdf report/a2/plots
 	
 test: $(NAME)
 	./miro && eog *.ppm && rm *.ppm

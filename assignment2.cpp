@@ -434,14 +434,12 @@ void a2task3()
 
 double mutate_value(double s1, double s2)
 {
-//    double dv = (s2-s1)*frand()+s1;
     double dv = s2*exp(-log(s2/s1)*frand());
 
     if (frand() < 0.5)
         return -dv;
     else
         return dv;
-
 }
 
 void mutate_path(const path &p0, path &p1)
