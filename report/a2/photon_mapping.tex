@@ -1,0 +1,21 @@
+\section*{Task 2}
+Our second task was to estimate the irradiance using Progressive Photon mapping. Similar to Assignment 1, we sent out 100,000 photons for 1,000 passes totaling 100 million photons emitted from the square light, which has a normal bias distribution. Rather than sampling one point, we now divide the interval between A and B into 100 discrete measurement points. Initially we set the radius to 0.25. On each pass, we adjust the radius $ \hat{R}(x) $ according to the user-defined ratio $ \alpha $ set to 0.7
+$$ \hat{R}(x) = R(x) - dR(x) = R(x)\sqrt{\frac{N(x)+\alpha M(x)}{N(x)+M(x)}} $$
+Where N(x) is the previously accumulated photons and M(x) is the newly added photons in the current photon tracing pass for each measurement point in the scene.
+$$ \tau_{\hat{N}}(x, w) = \tau_{N+M}(x, w)\frac{N(x) + \alpha M(x)}{N(x) + M(x)} $$
+Since we are again interested in the irradiance along the line, we calculate the irradiance by normalizing $ \tau_{\hat{N}}(x, w) $ by the number of emitted photons and the adjusted radius  $ \hat{R}(x)$:
+Since irradiance is normalized by the circle area, we decided to scale the boundary points whose radius extend beyond the diffuse square. We calculated the scaling factor by utilizing the intersection points of the measurement point with the triangle edges along the z-axis. Then we find the segment area using the $\theta$ created by the measurement point position and the intersection points:
+$$ A = \frac{1}{2} R(x)^2 (\theta - \sin{\theta}) $$
+So the irradiance is finally calculated by the following with A representing the circle segment area:
+$$ F = \frac{\tau_{N}(x, w)}{(\pi R(x)^2 – A) N_{emitted}} $$
+While this method is an approximation, the alternative was to crowd the measurement points together for the radii to fit within the triangles to get accurate irradiance. 
+Progressive photon mapping requires millions of photons to converge to the expected values of  0.72 $ \frac{W}{m^2} $ near the edges, and 0.3 $ \frac{W}{m^2} $ near the middle of the interval.
+\section*{Task 3}
+The third task implements the recently developed Adaptive Photon Mapping. This technique uses the adaptive Markov chain sampling to mutate the path and replica exchange to mix between uniform and Markov chain sampling to prevent becoming stuck any local peaks. There are again 100 measurement points with an initial radius $ R(x) $ of 0.25 and an alpha $ \alpha $ of 0.7.
+During each photon pass, we first emit a photon from the square light in a randomly sampled direction. This photon becomes the new good path if it hits a sample point. Otherwise we continue the pass by mutating the existing good path by the following:
+$$du_i = sgn(2\xi_1 - 1)\xi_2^{(\frac{1}{d_i}+1)}$$
+$$d_i = d_{i-1} + \gamma_i(a_i - a^*)$$
+$$\gamma_i = \frac{1}{i}$$
+$$a^* = 0.234$$
+This mutation strategy is applied in four dimensions, the photon direction spherical coordinates and the position along the square light. This photon then becomes the good path if it hits a sample point. Otherwise we sample the existing current path again. The measurement point’s flux and radius are adjusted every 100,000 iterations, same frequency and formulas as progressive photon mapping in task 2. This provides a suitable comparison for the resulting irradiance values along the measurement points:
+$$ F = \frac{\tau_{N}(x, w)}{(\pi R(x)^2 – A) N_{emitted}}*\frac{N_{hit}}{N_{total}} $$
