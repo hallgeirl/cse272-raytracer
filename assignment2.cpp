@@ -180,13 +180,13 @@ sample samplePath(const Vector3& origin)
 
 float MutatePath(const float MutationSize)
 {
-	return ((2 * frand() - 1) > 0 ? 1 : -1) * pow(frand(), (1/MutationSize)+1);
+	return ((2 * frand() - 1) > 0 ? 1 : -1) * pow(frand(), (1.f/MutationSize)+1);
 }
 
 float ApplyDeltaRange(const float delta, float value, const float x1, const float x2)
 {
-	float range = (x2 - x1) / 2.f;
-	return min<float>(max<float>(delta * range + value, x1), x2);
+	float range = (x2 - x1);
+	return min<float>(max<float>(value - delta * range, x1), x2);
 }
 
 bool UpdateMeasurementPoints(const Vector3& pos, const Vector3& power)
@@ -402,19 +402,18 @@ void a2task3()
 
 		//Mutatation size
 		float di = prev_di + (1.f / mutated) * (accepted/mutated - 0.234);
-		float dui = MutatePath(di);
+		//float dui = MutatePath(di);
+		float dui = ((2 * frand() - 1) > 0 ? 1 : -1) * pow(frand(), (1.f/di)+1);
 
 		// Initial path mutation
 		//path.d = goodPath.d + dui;
 
-		// Convert to spherical coords
-		float r = goodPath.d.length();
-		float theta = acos(goodPath.d.z / r);
-		float phi = atan(goodPath.d.y / goodPath.d.x);
+		// Convert to spherical coords (theta phi reversed)
+		float phi = acos(goodPath.d.z);
+		float theta = atan(goodPath.d.y / goodPath.d.x);
 
 		// add mutation and convert back to cartesian coords
 		path.d = alignHemisphereToVector(Vector3(0,1,0), ApplyDeltaRange(dui,theta, 0.f, 2*PI), ApplyDeltaRange(dui, phi, 0, PI/2.f)); 
-
 		path.o.x = ApplyDeltaRange(dui, goodPath.o.x, -1.75, 1.75);
 		path.o.z = ApplyDeltaRange(dui, goodPath.o.z, -0.05, 0.05);
 
@@ -433,6 +432,7 @@ void a2task3()
 		SamplePhotonPath(goodPath, power);		
     }
 
+	UpdatePhotonStats();
 	PrintPhotonStats(fp, m_photonsEmitted, uniform);
 
     fp.close();
