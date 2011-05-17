@@ -40,44 +40,7 @@ As expected, this scene requires a lot of rays in order to minimize the noise. E
 
 The irradiance estimate seems to converte to a value of $0.72W/m^2$ near the edges, and $0.3W/m^2$ near the middle of the interval.
 
-\section*{Task 2}
-Our second task was to estimate the irradiance using Progressive Photon mapping.  We sent out 100,000 photons for 1,000 passes totaling 100 million photons emitted from the square light, which has a normal bias distribution. Initially we set the radius to $0.25$. On each pass we adjust the radius $\hat{R}(x)$ according the user-defined ratio alpha $\alpha$ set to 0.7, as
-$$ \hat{R}(x) = R(x) - dR(x) = R(x)\sqrt{\frac{N(x)+\alpha M(x)}{N(x)+M(x)}}$$
-Where $N(x)$ is the previously accumulated photons and $M(x)$ is the newly added photons in the current photon tracing pass for each hitpoint in the scene. Figure \ref{fig:pm_radius} shows the radius and figure \ref{fig:pm_acc} shows the number of accumulated photons over 1,000 iterations.
-
-\begin{figure}[H]
-\begin{tabular}{c}
-%\includegraphics[width=0.9\textwidth]{plots/irrad_photonmap_radius.png}\\
-\end{tabular}
-\caption{Radius, photon mapping}
-\label{fig:pm_radius}
-\end{figure}
-
-\begin{figure}[h]
-\begin{tabular}{c}
-%\includegraphics[width=0.9\textwidth]{plots/irrad_photonmap_photons.png}\\
-\end{tabular}
-\caption{Accumulated photons}
-\label{fig:pm_acc}
-\end{figure}
-
-We also modify the accumulated flux $\tau_{\hat{N}}(x, \omega)$ in each pass, using
-$$\tau_{\hat{N}}(x, \omega) = \tau_{N+M}(x, \omega)\frac{N(x) + \alpha M(x)}{N(x) + M(x)}$$
-
-Since we are interested in the irradiance at point A, the BRDF does not contribute to the equation. We calculate the irradiance by normalizing $\tau_{\hat{N}}(x, \omega)$ by the number of emitted photons and the adjusted radius $\hat{R}(x)$:
-$$F = \frac{\tau_{N}(x, \omega)}{\pi R(x)^2 N_{emitted}}$$
-
-\begin{figure}[H]
-\begin{tabular}{c}
-%\includegraphics[width=0.9\textwidth]{plots/irrad_photonmap.png}\\
-\end{tabular}
-\caption{Irradiance, photon mapping}
-\label{fig:pm_irradiance}
-\end{figure}
-
-%Over multiple photon tracing passes the irradiance also converges to about 0.39, as with path tracing.
-
-\section*{Task 3 - Adaptive photon mapping}
+\input{photon_mapping}
 
 \section*{Task 4 - Metropolis path tracing}
 The last task was implementing a Metropolis light transport algorithm. A simplified view of this algorithm is that we first find a "good" path that gives a contribution. Then we slightly perturb this path, sample the new perturbed path, and either accept or reject this new path as the "good" one based on some acceptance probability $a$, and repeat. The theory is that if we do have a good path that gives a contribution $\mathbf{z}$, it's likely that a path $\mathbf{z}+\Delta \mathbf{z}$, that are perturbed by some amount $\Delta \mathbf{z}$, would also give a contribution, which allows us to more completely sample bright objects. This is often a problem for Monte Carlo path tracers because each pixel is evaluated independently which means that if there is a small bright object in the scene, one pixel may hit the object while neighboring pixels may miss it completely which introduces bright specles of noise in the image. 

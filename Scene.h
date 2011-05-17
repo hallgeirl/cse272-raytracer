@@ -24,9 +24,10 @@ struct HitPoint
 	int newPhotons;
 	long double accFlux;
 	long double newFlux;
+    float scaling;
 
 	HitPoint()
-		:position(0.f), normal(0.f), dir(0.f), brdf(1.f), radius(0.f), accPhotons(0), newPhotons(0), accFlux(0.f), newFlux(0.f)
+		:position(0.f), normal(0.f), dir(0.f), brdf(1.f), radius(0.f), accPhotons(0), newPhotons(0), accFlux(0.f), newFlux(0.f), scaling(1)
 	{}
 };
 

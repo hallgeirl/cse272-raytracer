@@ -120,6 +120,7 @@ makeTask2Scene()
 		hp->position = Vector3(2.*(float)i/((float)N-1.)-1., 0.f, 0.f);
 		hp->normal = Vector3(0, 1, 0);
 		hp->radius = 0.25f;
+        hp->scaling = 1.;
 
 		// for task 2
 		g_scene->addHitPoint(hp);
@@ -178,110 +179,6 @@ sample samplePath(const Vector3& origin)
     return samplePath(origin, ray.d);
 }
 
-float MutatePath(const float MutationSize)
-{
-	return ((2 * frand() - 1) > 0 ? 1 : -1) * pow(frand(), (1.f/MutationSize)+1);
-}
-
-float ApplyDeltaRange(const float delta, float value, const float x1, const float x2)
-{
-	float range = 1.f/64.f - 1.f/2048.f;
-	return min<float>(max<float>(value + delta * range, x1), x2);
-}
-
-bool UpdateMeasurementPoints(const Vector3& pos, const Vector3& power)
-{
-	bool hit = false;
-
-	for (int n = 0; n <  g_scene->hitpoints()->size(); ++n)
-	{
-		HitPoint *hp = (*g_scene->hitpoints())[n];
-		float d = sqrt(pow(pos.x - hp->position.x, 2) +
-			pow(pos.y - hp->position.y, 2) +
-			pow(pos.z - hp->position.z, 2));
-
-		if (d <= hp->radius)
-		{
-			//wait to update radius and flux
-			hp->newPhotons++;
-			hp->newFlux += power.x;
-
-			// can hit multiple measurement points	
-			hit = true;
-		}
-	}
-	return hit;
-}
-
-void UpdatePhotonStats()
-{
-	for (int n = 0; n < g_scene->hitpoints()->size(); ++n)
-	{
-		HitPoint *hp = (*g_scene->hitpoints())[n];
-		
-		// only adding a ratio of the newly added photons
-		float delta = (hp->accPhotons + PHOTON_ALPHA * hp->newPhotons)/(hp->accPhotons + hp->newPhotons);
-		hp->radius *= sqrt(delta);
-		hp->accPhotons += (int)(PHOTON_ALPHA * hp->newPhotons);
-		
-		// not sure about this flux acc, or about calculating the irradiance
-		hp->accFlux = ( hp->accFlux + hp->newFlux) * delta;	
-
-		// reset new values
-		hp->newPhotons = 0;
-		hp->newFlux = 0.f;
-	}
-}
-
-void PrintPhotonStats(ofstream& fp, const float photonsEmitted, const float uniform)
-{
-	for (int n = 0; n <  g_scene->hitpoints()->size(); ++n)
-	{
-		HitPoint *hp = (*g_scene->hitpoints())[n];
-
-		float A = PI * pow(hp->radius, 2);
-		CircleSegment(Vector3(-1,0,-1), Vector3(0,0,1), hp->radius, hp->position, A);
-		CircleSegment(Vector3(1,0,-1), Vector3(0,0,1), hp->radius, hp->position, A);
-
-		float result = (double)hp->accFlux / A / (float)photonsEmitted * (uniform / (float)photonsEmitted);
-		
-		fp << result << "\t";
-	}
-	fp << endl;
-}
-
-bool SamplePhotonPath(const Ray& path, const Vector3& power)
-{
-    HitInfo hitInfo(0, path.o, Vector3(0,1,0));
-
-	Ray ray(path.o, path.d);
-
-    while (true)
-    {
-        if (g_scene->trace(hitInfo, ray, 0, MIRO_TMAX))
-        {
-			//return if hit triangle backface
-			if (dot(ray.d, hitInfo.N) > 0)
-				return false;
-
-            //hit diffuse surface->we're done
-            if (!hitInfo.material->isReflective())
-            {
-                return UpdateMeasurementPoints(hitInfo.P, power);
-            }
-            //hit reflective surface => reflect and trace again
-            else 
-            {
-                ray = ray.reflect(hitInfo);
-            }
-        }
-        //Missed the scene
-        else 
-        {
-            return false;
-        }
-    }
-}
 
 void a2task1()
 {
@@ -335,14 +232,144 @@ void a2task1()
     }
 }
 
+float MutatePath(const float MutationSize)
+{
+	return ((2 * frand() - 1) > 0 ? 1 : -1) * pow(frand(), (1.f/MutationSize)+1);
+}
+
+float ApplyDeltaRange(const float delta, float value, const float x1, const float x2)
+{
+	float range = 1.f/64.f - 1.f/2048.f;
+	return min<float>(max<float>(value + delta * range, x1), x2);
+}
+
+bool UpdateMeasurementPoints(const Vector3& pos, const Vector3& power)
+{
+	bool hit = false;
+
+	for (int n = 0; n <  g_scene->hitpoints()->size(); ++n)
+	{
+		HitPoint *hp = (*g_scene->hitpoints())[n];
+		float d = sqrt(pow(pos.x - hp->position.x, 2) +
+			pow(pos.y - hp->position.y, 2) +
+			pow(pos.z - hp->position.z, 2));
+
+		if (d <= hp->radius)
+		{
+			//wait to update radius and flux
+			hp->newPhotons++;
+			hp->newFlux += power.x;
+
+			// can hit multiple measurement points	
+			hit = true;
+		}
+	}
+	return hit;
+}
+
+void UpdatePhotonStats()
+{
+	for (int n = 0; n < g_scene->hitpoints()->size(); ++n)
+	{
+		HitPoint *hp = (*g_scene->hitpoints())[n];
+
+        // Set scaling factor for next photon pass
+        float A = PI * pow(hp->radius, 2);
+        float A1 = A;
+
+        CircleSegment(Vector3(-1,0,-1), Vector3(0,0,1), hp->radius, hp->position, A1); 
+        CircleSegment(Vector3(1,0,-1), Vector3(0,0,1), hp->radius, hp->position, A1);
+        (*g_scene->hitpoints())[n]->scaling = A1/A;
+		
+		// only adding a ratio of the newly added photons
+		float delta = (hp->accPhotons + PHOTON_ALPHA * hp->newPhotons)/(hp->accPhotons + hp->newPhotons);
+		hp->radius *= sqrt(delta);
+		hp->accPhotons += (int)(PHOTON_ALPHA * hp->newPhotons);
+		
+		// not sure about this flux acc, or about calculating the irradiance
+		hp->accFlux = ( hp->accFlux + hp->newFlux/hp->scaling) * delta;	
+
+		// reset new values
+		hp->newPhotons = 0;
+		hp->newFlux = 0.f;
+
+	}
+}
+
+//void PrintPhotonStats(ofstream& fp, const float photonsEmitted, const float uniform)
+void PrintPhotonStats(stringstream ss[100], const float photonsEmitted, const float uniform)
+{
+	for (int n = 0; n <  g_scene->hitpoints()->size(); ++n)
+	{
+		HitPoint *hp = (*g_scene->hitpoints())[n];
+
+		float A = PI * pow(hp->radius, 2);
+
+		float result = (double)hp->accFlux / A / (float)photonsEmitted * (uniform / (float)photonsEmitted);
+		
+		ss[n] << result << "\t"; //fp << result << "\t";
+	}
+//	fp << endl;
+}
+
+bool SamplePhotonPath(const Ray& path, const Vector3& power)
+{
+    HitInfo hitInfo(0, path.o, Vector3(0,1,0));
+
+	Ray ray(path.o, path.d);
+
+    while (true)
+    {
+        if (g_scene->trace(hitInfo, ray, 0, MIRO_TMAX))
+        {
+			//return if hit triangle backface
+			if (dot(ray.d, hitInfo.N) > 0)
+				return false;
+
+            //hit diffuse surface->we're done
+            if (!hitInfo.material->isReflective())
+            {
+                return UpdateMeasurementPoints(hitInfo.P, power);
+            }
+            //hit reflective surface => reflect and trace again
+            else 
+            {
+                ray = ray.reflect(hitInfo);
+            }
+        }
+        //Missed the scene
+        else 
+        {
+            return false;
+        }
+    }
+}
+
 void a2task2()
 {
     cout << "Photon mapping" << endl;
 
-	ofstream fp("progphotonmapping_irrad.dat");
+    int Nphotons = 100000000;
+    int i = 0;
+    int N = 100;
 
-	while (g_scene->GetPhotonsEmitted() < 10000000)
+    stringstream ss_out[N];
+
+	while (g_scene->GetPhotonsEmitted() < Nphotons)
 	{
+        for (int n = 0; n < N; n++)
+        {
+			HitPoint *hp = (*g_scene->hitpoints())[n];
+			float A = PI * pow(hp->radius, 2);
+            float A1 = A;
+
+			CircleSegment(Vector3(-1,0,-1), Vector3(0,0,1), hp->radius, hp->position, A1); 
+			CircleSegment(Vector3(1,0,-1), Vector3(0,0,1), hp->radius, hp->position, A1);
+//            (*g_scene->hitpoints())[n]->scaling = A1/A;
+        }
+
+        i++;
+        cout << "Pass " << i << " of " << Nphotons/100000 <<  endl;
 		g_scene->ProgressivePhotonPass();
 		//printf("%ld %lf %lf %d \n", g_scene->GetPhotonsEmitted(), (double)hp->accFlux / PI / pow(hp->radius, 2) / g_scene->GetPhotonsEmitted(), hp->radius, hp->accPhotons);
 		for (int n = 0; n < g_scene->hitpoints()->size(); ++n)
@@ -350,15 +377,21 @@ void a2task2()
 			HitPoint *hp = (*g_scene->hitpoints())[n];
 
 			float A = PI * pow(hp->radius, 2);
+            
+//			fp << (double)hp->accFlux / A / (float)g_scene->GetPhotonsEmitted() << "\t";
 
-			CircleSegment(Vector3(-1,0,-1), Vector3(0,0,1), hp->radius, hp->position, A); 
-			CircleSegment(Vector3(1,0,-1), Vector3(0,0,1), hp->radius, hp->position, A);
-			
-			fp << (double)hp->accFlux / A / (float)g_scene->GetPhotonsEmitted() << "\t";
+            ss_out[n] << (double)hp->accFlux / A / (float)g_scene->GetPhotonsEmitted() << "\t";
 		}
-		fp << endl;
+        cout << g_scene->hitpoints()->at(0)->radius << endl;
+//		fp << endl;
+
 	}
 
+	ofstream fp("progressive_irrad.dat");
+    for (int j = 0; j < N; j++)
+    {
+        fp << ss_out[j].str().c_str() << endl;
+    }
 
 	fp.close();
 
@@ -366,7 +399,6 @@ void a2task2()
 
 void a2task3()
 {
-    ofstream fp("adaptiveppm_irrad.dat");
 
 	//find starting good path
     Vector3 power = g_l->color() * g_l->wattage(); 
@@ -376,7 +408,8 @@ void a2task3()
 	float mutated = 1;
 	float accepted = 0;
 	float uniform = 0;
-
+    int Nphotons = 10000000;
+    stringstream ss_out[100];
 	do
 	{
         goodPath.o = g_l->samplePhotonOrigin();
@@ -384,12 +417,14 @@ void a2task3()
 		//goodPath.o.x = -abs(goodPath.o.x);
 	} while (!SamplePhotonPath(goodPath, power));
 
-	for (m_photonsEmitted = 0; m_photonsEmitted < 10000000; m_photonsEmitted++)
+	for (m_photonsEmitted = 0; m_photonsEmitted < Nphotons; m_photonsEmitted++)
     {
+
 		if (m_photonsEmitted > 0 && m_photonsEmitted % 100000 == 0)
 		{
 			UpdatePhotonStats();
-			PrintPhotonStats(fp, m_photonsEmitted, uniform);
+			PrintPhotonStats(ss_out, m_photonsEmitted, uniform);
+            cout << "Pass " << m_photonsEmitted / 100000 << " of " << Nphotons/100000 << endl;
 		}
 
         //Test random photon path
@@ -417,7 +452,7 @@ void a2task3()
 		float theta = atan(goodPath.d.y / goodPath.d.x);
 
 		// add mutation and convert back to cartesian coords
-		path.d = alignHemisphereToVector(Vector3(0,1,0), ApplyDeltaRange(MutatePath(di)*0.125,theta, 0.f, 2*PI), ApplyDeltaRange(MutatePath(di)*0.125, phi, 0, PI)); 
+		path.d = alignHemisphereToVector(Vector3(0,1,0), ApplyDeltaRange(MutatePath(di)*0.125,theta, 0.f, 2.*PI), ApplyDeltaRange(MutatePath(di)*0.125, phi, 0, PI/2.)); 
 		path.o.x = ApplyDeltaRange(MutatePath(di), goodPath.o.x, -1.75, 1.75);
 		path.o.z = ApplyDeltaRange(MutatePath(di), goodPath.o.z, -0.05, 0.05);
 
@@ -437,8 +472,11 @@ void a2task3()
     }
 
 	UpdatePhotonStats();
-	PrintPhotonStats(fp, m_photonsEmitted, uniform);
+	PrintPhotonStats(ss_out, m_photonsEmitted, uniform);
 
+    ofstream fp("adaptiveppm_irrad.dat");
+    for (int i = 0; i < 100; i++)
+        fp << ss_out[i].str().c_str() << endl;
     fp.close();
 }
 

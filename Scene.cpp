@@ -516,7 +516,7 @@ void Scene::ProgressivePhotonPass()
 		hp->accPhotons += (int)(PHOTON_ALPHA * M);
 		
 		//not sure about this flux acc, or about calculating the irradiance
-		hp->accFlux = ( hp->accFlux + irradiance[0] ) * delta;	
+		hp->accFlux = ( hp->accFlux + irradiance[0]/hp->scaling ) * delta;	
 	}
 
 	m_photonMap.empty();
