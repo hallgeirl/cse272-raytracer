@@ -240,11 +240,17 @@ float MutatePath(const float MutationSize)
 float ApplyDeltaRange(const float delta, float value, const float x1, const float x2)
 {
 	float range = x2 - x1;
-	float result = value + delta / 64.f;
+    float delta_ = 0;
+    if (delta < -range) delta_ = -range;
+    if (delta > range) delta_ = range;
+    float result = value + delta_;
+    
 	if (result < x1)
 		result += range;
 	else if ( result > x2)
 		result -= range;
+/*    if (delta > 1000 || delta < -1000)
+        cout << delta << endl; */
 
 	return result;
 }
@@ -355,7 +361,7 @@ void a2task2()
 {
     cout << "Photon mapping" << endl;
 
-    int Nphotons = 10000000;
+    int Nphotons = 100000000;
     int i = 0;
     const int N = 100;
 
@@ -388,7 +394,6 @@ void a2task2()
 
             ss_out[n] << (double)hp->accFlux / A / (float)g_scene->GetPhotonsEmitted() << "\t";
 		}
-        cout << g_scene->hitpoints()->at(0)->radius << endl;
 //		fp << endl;
 
 	}
@@ -413,7 +418,7 @@ void a2task3()
 	float mutated = 1;
 	float accepted = 0;
 	float uniform = 0;
-    int Nphotons = 10000000;
+    int Nphotons = 100000000;
     stringstream ss_out[100];
 	do
 	{
@@ -424,12 +429,14 @@ void a2task3()
 	for (m_photonsEmitted = 0; m_photonsEmitted < Nphotons; m_photonsEmitted++)
     {
 
-		if (m_photonsEmitted > 0 && m_photonsEmitted % 100000 == 0)
+		if (m_photonsEmitted > 0 && m_photonsEmitted % 1000000 == 0)
 		{
 			UpdatePhotonStats();
-			PrintPhotonStats(ss_out, m_photonsEmitted, uniform);
-            cout << "Pass " << m_photonsEmitted / 100000 << " of " << Nphotons/100000 << endl;
+            if (m_photonsEmitted % 100000 == 0)
+                cout << "Pass " << m_photonsEmitted / 100000 << " of " << Nphotons/100000 << endl;
 		}
+        if (m_photonsEmitted > 0 && m_photonsEmitted % 100000 == 0)
+			PrintPhotonStats(ss_out, m_photonsEmitted, uniform);
 
         //Test random photon path
         Ray path(g_l->samplePhotonOrigin(), g_l->samplePhotonDirection());
@@ -448,7 +455,7 @@ void a2task3()
 		float theta = atan2(goodPath.d.y, goodPath.d.x);
 
 		// add mutation and convert back to cartesian coords
-		path.d = alignHemisphereToVector(Vector3(0,1,0), ApplyDeltaRange(MutatePath(di)*0.125,theta, 0.f, 2.*PI), ApplyDeltaRange(MutatePath(di)*0.125, phi, 0, PI/2.)); 
+		path.d = alignHemisphereToVector(Vector3(0,1,0), ApplyDeltaRange(MutatePath(di),theta, 0.f, 2.*PI), ApplyDeltaRange(MutatePath(di), phi, 0, PI/2.)); 
 		path.o.x = ApplyDeltaRange(MutatePath(di), goodPath.o.x, -1.75, 1.75);
 		path.o.z = ApplyDeltaRange(MutatePath(di), goodPath.o.z, -0.05, 0.05);
 
