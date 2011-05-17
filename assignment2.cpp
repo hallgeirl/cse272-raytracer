@@ -234,13 +234,19 @@ void a2task1()
 
 float MutatePath(const float MutationSize)
 {
-	return ((2 * frand() - 1) > 0 ? 1 : -1) * pow(frand(), (1.f/MutationSize)+1);
+	return ((2 * frand() - 1) > 0 ? 1 : -1) * pow(frand(), 1.f/MutationSize+1);
 }
 
 float ApplyDeltaRange(const float delta, float value, const float x1, const float x2)
 {
-	float range = 1.f/64.f - 1.f/2048.f;
-	return min<float>(max<float>(value + delta * range, x1), x2);
+	float range = x2 - x1;
+	float result = value + delta / 64.f;
+	if (result < x1)
+		result += range;
+	else if ( result > x2)
+		result -= range;
+
+	return result;
 }
 
 bool UpdateMeasurementPoints(const Vector3& pos, const Vector3& power)
@@ -349,9 +355,9 @@ void a2task2()
 {
     cout << "Photon mapping" << endl;
 
-    int Nphotons = 100000000;
+    int Nphotons = 10000000;
     int i = 0;
-    int N = 100;
+    const int N = 100;
 
     stringstream ss_out[N];
 
@@ -365,7 +371,7 @@ void a2task2()
 
 			CircleSegment(Vector3(-1,0,-1), Vector3(0,0,1), hp->radius, hp->position, A1); 
 			CircleSegment(Vector3(1,0,-1), Vector3(0,0,1), hp->radius, hp->position, A1);
-//            (*g_scene->hitpoints())[n]->scaling = A1/A;
+            (*g_scene->hitpoints())[n]->scaling = A1/A;
         }
 
         i++;
@@ -399,7 +405,6 @@ void a2task2()
 
 void a2task3()
 {
-
 	//find starting good path
     Vector3 power = g_l->color() * g_l->wattage(); 
 	Ray goodPath;
@@ -414,7 +419,6 @@ void a2task3()
 	{
         goodPath.o = g_l->samplePhotonOrigin();
         goodPath.d = g_l->samplePhotonDirection();
-		//goodPath.o.x = -abs(goodPath.o.x);
 	} while (!SamplePhotonPath(goodPath, power));
 
 	for (m_photonsEmitted = 0; m_photonsEmitted < Nphotons; m_photonsEmitted++)
@@ -429,7 +433,6 @@ void a2task3()
 
         //Test random photon path
         Ray path(g_l->samplePhotonOrigin(), g_l->samplePhotonDirection());
-		//path.o.x = -abs(path.o.x);
 		if (SamplePhotonPath(path, power))
 		{
 			goodPath = path;
@@ -439,17 +442,10 @@ void a2task3()
 
 		//Mutatation size
 		float di = prev_di + (1.f / mutated) * (accepted/mutated - 0.234);
-		//float dui = MutatePath(di);
-		//float dui = ((2 * frand() - 1) > 0 ? 1 : -1) * pow(frand(), (1.f/di)+1);
-
-		// Initial path mutation
-		//path.d = goodPath.d + dui;
-
-		//path.o.x = -abs(path.o.x);
 
 		// Convert to spherical coords (theta phi reversed)
 		float phi = acos(goodPath.d.z);
-		float theta = atan(goodPath.d.y / goodPath.d.x);
+		float theta = atan2(goodPath.d.y, goodPath.d.x);
 
 		// add mutation and convert back to cartesian coords
 		path.d = alignHemisphereToVector(Vector3(0,1,0), ApplyDeltaRange(MutatePath(di)*0.125,theta, 0.f, 2.*PI), ApplyDeltaRange(MutatePath(di)*0.125, phi, 0, PI/2.)); 
