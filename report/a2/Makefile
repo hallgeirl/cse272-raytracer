@@ -1,17 +1,20 @@
 TEX=pdflatex
-SRC=document
-TRASH=$(shell ls *.aux *.idx *.log *.toc *.ilg *.ind *.backup)
+OBJ=document.pdf
+TRASH=$(shell ls *.aux *.idx *.log *.toc *.ilg *.ind *.backup *.nav *.out *.snm 2>/dev/null)
 
-all:${SRC}
-${SRC}:
-	${TEX} ${SRC}	
+.SUFFIXES : .tex .pdf
+
+.tex.pdf: 
+	$(TEX) $<
+	$(TEX) $<
+
+all:${OBJ}
+
+
 view:all
-	evince  ${SRC}.pdf&
-clean:
-	@for FILE in ${TRASH}; do\
-		if [ -e $$FILE ]; then\
-			echo "Deleting $$FILE" && rm $$FILE;\
-		fi;\
-	done
+	evince  ${OBJ}&
 
-test: view
+clean:
+	rm -f $(OBJ)
+	rm -f $(TRASH)
+test:view

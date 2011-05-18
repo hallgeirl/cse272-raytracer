@@ -70,12 +70,12 @@ where $M$ is the total number of samples. Figures \ref{fig:metropolis_irrad1}, \
 
 \begin{figure}
     \centering
-    \includegraphics[width=0.8\textwidth]{plots/metropolis_irrad_last}\\
+    \includegraphics[width=0.8\textwidth]{plots/metropolis_irrad_100mill}\\
     \caption{Metropolis, 100 million sample rays vs. Monte Carlo, 1 billion sample rays}
     \label{fig:metropolis_irrad100}
 \end{figure}
 
-We see that for this scene, the level of noise for Metropolis is significantly lower than that of Monte Carlo path tracing. Looking at the final distribution (figure \ref{fig:metropolis_irrad100}), we see that the amount of noise is about the same. However, keep in mind that the Monte Carlo used ten times as many rays to get there. The irradiance for the Metropolis run is slightly skewed (point 0 has a slightly higher irradiance than point 99); this is due to random variation. In this scene, there are two bright spots on the opposite sides of the interval, so we must rely on large steps in order to sample both sides. But even with large steps, there is a large probability that one side will be sampled more than the other.
+We see that for this scene, the level of noise for Metropolis is significantly lower than that of Monte Carlo path tracing. Looking at the final distribution (figure \ref{fig:metropolis_irrad100}), we see that the amount of noise is significantly less for Metropolis for 100 million rays. The irradiance for the Metropolis run is slightly skewed (point 0 has a slightly higher irradiance than point 99); this is due to random variation. In this scene, there are two bright spots on the opposite sides of the interval, so we must rely on large steps in order to sample both sides. But even with large steps, there is a large probability that one side will be sampled more than the other.
 
 \subsection*{Mutation strategy}
 We implement the mutation strategy recommended in Csaba Kelemen et. al., "A Simple and Robust Mutation Strategy for the Metropolis Light Transport Algorithm". It's given in figure \ref{fig:mutation_metropolis}. As seen in the pseudo code, we mutate the angles by a smaller amount. This seems to work well with this scene, because when the path moves close to the middle, the solid angle of the reflected light source in the mirror is very small.

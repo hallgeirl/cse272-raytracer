@@ -19,7 +19,7 @@ struct HitPoint
 	float brdf;
 	//int pixel_x, pixel_y;
 	//float pixel_wgt;
-	float radius;
+	double radius;
 	int accPhotons;
 	int newPhotons;
 	long double accFlux;

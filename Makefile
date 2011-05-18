@@ -11,7 +11,7 @@ PNG=$(shell ls *.png 2>/dev/null)
 PLOTS=$(patsubst %.p,%.pdf,$(shell ls *.p))
 #PLOTS=$(patsubst %.p,%.png,$(shell ls *.p))
 
-CXXFLAGS += -DLINUX
+CXXFLAGS += -DLINUX -DALTERNATIVE -g
 
 assignment2.cpp: assignment2.h
 

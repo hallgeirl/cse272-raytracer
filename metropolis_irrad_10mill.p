@@ -10,4 +10,5 @@ set ylabel "Irradiance (W/m^2)"
 set grid
 
 plot "metropolis_irrad.dat" using 10000 with lines lc rgb "red" title "Metropolis path tracing",\
-"pathtracing_irrad.dat" using 100 with lines lc rgb "black" title "Monte carlo path tracing"
+"pathtracing_irrad.dat" using 10000 with lines lc rgb "black" title "Monte Carlo path tracing (1 billion rays)",\
+"pathtracing_irrad.dat" using 100 with lines lc rgb "blue" title "Monte Carlo path tracing (10 million rays)"
