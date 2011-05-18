@@ -93,6 +93,9 @@ The results are plotted in figures \ref{fig:adaptive_irrad1} and \ref{fig:adapti
 
 We see that for the 10 and 100 million experiments, adaptive photon mapping converges about 10 times faster than progressive photon mapping. However, due to our choice of using 1 million photons per pass, the 1 million photon experiment is not as accurate as progressive photon mapping.
 
+\subsection*{Error analysis}
+We compare the irradiance for each discrete point after the last sample ray for Monte Carlo path tracing to the measurement point irradiance to visualize how the errors decreased over time. We calculated the mean square error over the interval for different number of sample points, $Err = 1/N_p \sum_{i=1}^{N_p} (E_{i,a} - E_{i,p})^2$, where $E_{i,a}$ and $E_{i,p}$ is the irradiance for point $i$ for Adaptive Photon Mapping emitting 100 million photons, and Monte Carlo path tracing for 1 billion samples. Figure \ref{fig:adaptive_msq} shows the mean square error for different number of samples.
+
 \begin{figure}
     \centering
     \includegraphics[width=0.8\textwidth]{plots/adaptiveppm_msq}\\
@@ -100,4 +103,3 @@ We see that for the 10 and 100 million experiments, adaptive photon mapping conv
     \label{fig:adaptive_msq}
 \end{figure}
 
-Here be errors!
