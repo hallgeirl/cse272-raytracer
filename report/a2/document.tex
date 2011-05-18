@@ -52,7 +52,7 @@ $$
 by shooting $N_s$ rays from random positions with a distribution of $p = \cos \theta/\pi$. Now we use one of the paths from the seeding process as our first path $\mathbf{z}_0$. Each path $\mathbf{z}$ contibutes to one and only one point, by designating a interval of length $(1- (-1))/N_p=2/N_p$ to each point, where $N_p$ is the number of discrete points, over the full interval of length $2$. The contribution from each path is 
 $$\Delta E = \frac{1}{M} \frac{I(\mathbf{z})N_p}{p(\mathbf{z})}a(\mathbf{z}_{old}\to \mathbf{z}_{new}) = \frac{1}{M} \frac{I(\mathbf{z})N_p}{I(\mathbf{z})/b} a(\mathbf{z}_{old}\to \mathbf{z}_{new}) = \frac{bN_p}{M} a(\mathbf{z}_{old}\to \mathbf{z}_{new})$$ 
 
-where $M$ is the total number of samples. Figures \ref{fig:metropolis_irrad1}, \ref{fig:metropolis_irrad10} and \ref{fig:metropolis_irrad100} shows the irradiance estimates for the interval for 1 million, 10 million and 100 million sample rays, compared to Monte Carlo path tracing with the same number of total rays.
+where $M$ is the total number of samples. Figures \ref{fig:metropolis_irrad1}, \ref{fig:metropolis_irrad10} and \ref{fig:metropolis_irrad100} shows the irradiance estimates for the interval for 1, 10 and 100 million, and 1 billion sample rays, compared to Monte Carlo path tracing with the same number of total rays.
 
 \begin{figure}[h]
     \centering
@@ -71,8 +71,15 @@ where $M$ is the total number of samples. Figures \ref{fig:metropolis_irrad1}, \
 \begin{figure}
     \centering
     \includegraphics[width=0.8\textwidth]{plots/metropolis_irrad_100mill}\\
-    \caption{Metropolis, 100 million sample rays vs. Monte Carlo, 1 billion sample rays}
+    \caption{Metropolis, vs. Monte Carlo, 100 million sample rays each}
     \label{fig:metropolis_irrad100}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.8\textwidth]{plots/metropolis_irrad_1bill}\\
+    \caption{Metropolis, vs. Monte Carlo, 1 billion sample rays each}
+    \label{fig:metropolis_irrad1000}
 \end{figure}
 
 We see that for this scene, the level of noise for Metropolis is significantly lower than that of Monte Carlo path tracing. Looking at the final distribution (figure \ref{fig:metropolis_irrad100}), we see that the amount of noise is significantly less for Metropolis for 100 million rays. The irradiance for the Metropolis run is slightly skewed (point 0 has a slightly higher irradiance than point 99); this is due to random variation. In this scene, there are two bright spots on the opposite sides of the interval, so we must rely on large steps in order to sample both sides. But even with large steps, there is a large probability that one side will be sampled more than the other.
