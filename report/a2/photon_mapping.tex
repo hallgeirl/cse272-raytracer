@@ -101,12 +101,6 @@ We compare the irradiance for each discrete point after the last sample ray for 
     \label{fig:adaptive_msq}
 \end{figure}
 
-Considering the path tracing solution has noise in it, there is a point where the measured error does not diminish any more. We also compare 100 million adaptive photons to the 1 billion progressive photons and 1 billion Monte Carlo path tracing result. According to \ref{fig:}, it seems like the 100 million adaptive photons converges more accurately than the other methods. 
+Considering the path tracing solution has noise in it, there is a point where the measured error does not diminish any more. According to \ref{fig:adaptive_irrad100}, where we compare 100 million adaptive photons to the 1 billion progressive photons and 1 billion Monte Carlo path tracing result, it seems like the 100 million adaptive photons converges more accurately than the other methods. 
 
-\begin{figure}
-    \centering
-    \includegraphics[width=0.8\textwidth]{plots/}\\
-    \caption{Adaptive photon mapping, mean square error}
-    \label{fig:adapative}
-\end{figure}
 
