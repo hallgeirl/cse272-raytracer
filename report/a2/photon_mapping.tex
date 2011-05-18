@@ -63,9 +63,7 @@ $$d_i = d_{i-1} + \gamma_i(a_i - a^*)$$
 $$\gamma_i = \frac{1}{i}$$
 $$a^* = 0.234$$
 
-This mutation strategy is applied in four dimensions; the photon direction in spherical coordinates and the position along the square light. This photon then becomes the good path if it hits a sample point. Otherwise we sample the existing good path again. The measurement point's flux and radius are adjusted every 1,000,000 iterations. We found that a higher number of photons per pass gave us a more stable convergence.
-The same formulas for radius and flux updates as for progressive photon mapping were used, although with a variable $\alpha$. 
-However, we normalize the final irradiance estimate for each hit point by the probability of hitting a measurement point using a uniform photon.
+This mutation strategy is applied in four dimensions; the photon direction in spherical coordinates and the position along the square light. This photon then becomes the good path if it hits a sample point. Otherwise we sample the existing good path again. The measurement point's flux and radius are adjusted every 1,000,000 iterations. We found that a higher number of photons per pass gave us a more stable convergence. The same formulas for radius and flux updates as for progressive photon mapping were used, although with a variable $\alpha$. However, we normalize the final irradiance estimate for each hit point by the probability of hitting a measurement point using a uniform photon.
 $$ F = \frac{\tau_{N}(x, w)}{(\pi R(x)^2) N_{emitted}}*\frac{N_{hit}}{N_{total}} $$
 
 The results are plotted in figures \ref{fig:adaptive_irrad1} and \ref{fig:adaptive_irrad10} and \ref{fig:adaptive_irrad100}.
@@ -91,7 +89,7 @@ The results are plotted in figures \ref{fig:adaptive_irrad1} and \ref{fig:adapti
     \label{fig:adaptive_irrad100}
 \end{figure}
 
-We see that for the 10 and 100 million experiments, adaptive photon mapping converges about 10 times faster than progressive photon mapping. However, due to our choice of using 1 million photons per pass, the 1 million photon experiment is not as accurate as progressive photon mapping.
+We see that for the 10 and 100 million experiments, adaptive photon mapping converges about 10 times faster than progressive photon mapping. However, due to our choice of using 1 million photons per update pass, the 1 million photon experiment is not as accurate as progressive photon mapping.
 
 \subsection*{Error analysis}
 We compare the irradiance for each discrete point after the last sample ray for Monte Carlo path tracing to the measurement point irradiance to visualize how the errors decreased over time. We calculated the mean square error over the interval for different number of sample points, $Err = 1/N_p \sum_{i=1}^{N_p} (E_{i,a} - E_{i,p})^2$, where $E_{i,a}$ and $E_{i,p}$ is the irradiance for point $i$ for Adaptive Photon Mapping emitting 100 million photons, and Monte Carlo path tracing for 1 billion samples. Figure \ref{fig:adaptive_msq} shows the mean square error for different number of samples.
@@ -101,5 +99,14 @@ We compare the irradiance for each discrete point after the last sample ray for 
     \includegraphics[width=0.8\textwidth]{plots/adaptiveppm_msq}\\
     \caption{Adaptive photon mapping, mean square error}
     \label{fig:adaptive_msq}
+\end{figure}
+
+Considering the path tracing solution has noise in it, there is a point where the measured error does not diminish any more. We also compare 100 million adaptive photons to the 1 billion progressive photons and 1 billion Monte Carlo path tracing result. According to \ref{fig:}, it seems like the 100 million adaptive photons converges more accurately than the other methods. 
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.8\textwidth]{plots/}\\
+    \caption{Adaptive photon mapping, mean square error}
+    \label{fig:adapative}
 \end{figure}
 
