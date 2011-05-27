@@ -20,7 +20,7 @@ using std::max;
 
 
 void 
-makeTask2Scene()
+makeTask3Scene()
 {
     g_image->resize(512, 512);
 
@@ -181,7 +181,7 @@ sample samplePath(const Vector3& origin)
 }
 
 
-void a2task1()
+void a3task1()
 {
     cout << "Path tracing" << endl;
 	HitInfo hitInfo(0, Vector3(0, epsilon, 0), Vector3(0,1,0));
@@ -362,53 +362,7 @@ bool SamplePhotonPath(const Ray& path, const Vector3& power)
     }
 }
 
-void a2task2()
-{
-    cout << "Photon mapping" << endl;
-
-    int Nphotons = 1000000000;
-    int i = 0;
-    const int N = 100;
-
-    stringstream ss_out[N];
-
-	while (g_scene->GetPhotonsEmitted() < Nphotons)
-	{
-        for (int n = 0; n < N; n++)
-        {
-			HitPoint *hp = (*g_scene->hitpoints())[n];
-			float A = PI * pow(hp->radius, 2);
-            float A1 = A;
-
-			CircleSegment(Vector3(-1,0,-1), Vector3(0,0,1), hp->radius, hp->position, A1); 
-			CircleSegment(Vector3(1,0,-1), Vector3(0,0,1), hp->radius, hp->position, A1);
-            (*g_scene->hitpoints())[n]->scaling = A1/A;
-        }
-
-        i++;
-        cout << "Pass " << i << " of " << Nphotons/100000 <<  endl;
-		g_scene->ProgressivePhotonPass();
-		for (int n = 0; n < g_scene->hitpoints()->size(); ++n)
-		{
-			HitPoint *hp = (*g_scene->hitpoints())[n];
-
-			float A = PI * pow(hp->radius, 2);
-            
-            ss_out[n] << (double)hp->accFlux / A / (float)g_scene->GetPhotonsEmitted() << "\t";
-		}
-	}
-
-	ofstream fp("progressive_irrad.dat");
-    for (int j = 0; j < N; j++)
-    {
-        fp << ss_out[j].str().c_str() << endl;
-    }
-
-	fp.close();
-
-}
-
-void a2task3()
+void a3task2()
 {
     long double ptracing_output[100];
     ofstream msq_fp("adaptiveppm_msq.dat");
@@ -586,7 +540,7 @@ void mutate_path(const path &p0, path &p1)
     }
 }
 
-void a2task4()
+void a3task3()
 {
     cout << "Metropolis sampling" << endl;
 	HitInfo hitInfo(0, Vector3(0, epsilon, 0), Vector3(0,1,0));
