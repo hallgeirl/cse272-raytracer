@@ -1,13 +1,14 @@
-#ifndef __ASSIGNMENT2_H_
-#define __ASSIGNMENT2_H_
+#ifndef __ASSIGNMENT3_H_
+#define __ASSIGNMENT3_H_
 #include <map>
 #include <cstring>
+#include "Material.h"
 
-void makeTask2Scene();
-void a2task1();
-void a2task2();
-void a2task3();
-void a2task4();
+void makeTask3Scene();
+void a3task1();
+void a3task2();
+void a3task3();
+void BuildSquare(const Vector3& min, const Vector3& max, const Vector3& normal, const Material* mat);
 
 struct sample
 {
