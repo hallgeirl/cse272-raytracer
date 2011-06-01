@@ -3,11 +3,10 @@
 #include <map>
 #include <cstring>
 
-void makeTask2Scene();
-void a2task1();
-void a2task2();
-void a2task3();
-void a2task4();
+void makeTask3Scene();
+void a3task1();
+void a3task2();
+void a3task3();
 
 struct sample
 {
