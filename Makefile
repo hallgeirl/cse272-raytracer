@@ -8,12 +8,12 @@ SOURCES -=  parse.cpp lexer.cpp
 OBJS -=  parse.o lexer.o
 PDF=$(shell ls *.pdf 2>/dev/null)
 PNG=$(shell ls *.png 2>/dev/null)
-PLOTS=$(patsubst %.p,%.pdf,$(shell ls *.p))
+PLOTS=$(patsubst %.p,%.pdf,$(shell ls *.p 2> /dev/null))
 #PLOTS=$(patsubst %.p,%.png,$(shell ls *.p))
 
-CXXFLAGS += -DLINUX -DALTERNATIVE -g
+CXXFLAGS += -DLINUX -g
 
-assignment2.cpp: assignment2.h
+assignment2.o: assignment2.h
 
 # 
 # lexer.cpp: lexer.lex
@@ -51,3 +51,8 @@ plots: $(PLOTS)
 test: $(NAME)
 	./miro && eog *.ppm && rm *.ppm
 
+shipit: clean
+	mkdir -p turnin
+	make -C report/a2
+	cp report/a2/document.pdf turnin/report.pdf
+	tar -cvz *.cpp Makefile *.h lib > turnin/turnin.tar.gz

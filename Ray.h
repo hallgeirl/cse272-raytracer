@@ -25,7 +25,7 @@ class HitInfo
         Vector3 P;                          //!< The hit point
         Vector3 N;                          //!< Shading normal vector
         const Material* material;           //!< Material of the intersected object
-        const Object  * object;             //!< Material of the intersected object
+        Object  * object;             //!< Material of the intersected object
 
         //! Default constructor.
         explicit HitInfo(float t = 0.0f,

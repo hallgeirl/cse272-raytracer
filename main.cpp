@@ -5,7 +5,7 @@
 #endif
 #include "Miro.h"
 #include "MiroWindow.h"
-#include "assignment2.h"
+#include "assignment3.h"
 #include <FreeImage.h>
 #include "Camera.h"
 #include "Image.h"
@@ -20,6 +20,7 @@ void setup()
     g_image = new Image;
 }
 
+void makeCornellScene();
 
 int
 main(int argc, char*argv[])
@@ -54,6 +55,10 @@ int mode = 0;
 
 cout << "Mode: " << mode << endl;
 
+//makeTask3Scene();
+
+makeCornellScene();
+
 if (mode == 0)
 {
     cout << "Executing main rendering loop" << endl;
@@ -63,7 +68,6 @@ if (mode == 0)
 else if (mode == 1)
 {
     //A1makeTeapotScene();
-    makeTask2Scene();
     cout << "Rendering without display" << endl;
     g_camera->setRenderer(Camera::RENDER_RAYTRACE);
     g_camera->click(g_scene, g_image);
@@ -72,11 +76,9 @@ else if (mode == 1)
 else
 {
     cout << "Alternative tasks" << endl;
-	makeTask2Scene();
 //    a2task1();
 //    a2task2();
 //    a2task3();
-    a2task4();
 }
 
 #ifndef NO_FREEIMAGE
