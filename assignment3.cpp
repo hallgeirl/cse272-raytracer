@@ -1,4 +1,4 @@
-#include "assignment2.h"
+#include "assignment3.h"
 #include <fstream>
 #include <sstream>
 #include <iostream>
@@ -26,7 +26,7 @@ makeTask3Scene()
 
     // set up the camera
     g_camera->setBGColor(Vector3(0.0f, 0.0f, 0.0f));
-    g_camera->setEye(Vector3(0, -0.3, 3));
+    g_camera->setEye(Vector3(0, -0.3, 2));
     g_camera->setLookAt(Vector3(0, 0, 0));
     g_camera->setUp(Vector3(0, 1, 0));
     g_camera->setFOV(90);
