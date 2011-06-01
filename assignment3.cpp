@@ -18,6 +18,38 @@ using namespace std;
 using std::min;
 using std::max;
 
+void BuildSquare(const Vector3& min, const Vector3& max, const Vector3& normal, const Material* mat)
+{
+    TriangleMesh * square1 = new TriangleMesh;
+    square1->createSingleTriangle();
+    square1->setV1(Vector3( min.x, min.y, min.z));
+    square1->setV2(Vector3( max.x, max.y, max.z));
+    square1->setV3(Vector3( max.x, max.y, min.z));
+    square1->setN1(normal);
+    square1->setN2(normal);
+    square1->setN3(normal);
+    
+    Triangle* t = new Triangle;
+    t->setIndex(0);
+    t->setMesh(square1);
+    t->setMaterial(new Phong(Vector3(1), Vector3(0))); 
+    g_scene->addObject(t);
+
+	TriangleMesh * square2 = new TriangleMesh;
+    square2->createSingleTriangle();
+    square2->setV1(Vector3( min.x, min.y, min.z));
+    square2->setV2(Vector3( min.x, min.y, max.z));
+    square2->setV3(Vector3( max.x, max.y, max.z));
+    square2->setN1(normal);
+    square2->setN2(normal);
+    square2->setN3(normal);
+
+    Triangle* t2 = new Triangle;
+    t2->setIndex(0);
+    t2->setMesh(square2);
+    t2->setMaterial(mat); 
+    g_scene->addObject(t2);
+}
 
 void 
 makeTask3Scene()
@@ -26,7 +58,7 @@ makeTask3Scene()
 
     // set up the camera
     g_camera->setBGColor(Vector3(0.0f, 0.0f, 0.0f));
-    g_camera->setEye(Vector3(0, -0.3, 2));
+    g_camera->setEye(Vector3(0, 0, -3));
     g_camera->setLookAt(Vector3(0, 0, 0));
     g_camera->setUp(Vector3(0, 1, 0));
     g_camera->setFOV(90);
@@ -35,16 +67,33 @@ makeTask3Scene()
     //real squarelight
     SquareLight *l = new SquareLight;
     g_l = l;
-    l->setDimensions(3.5,.1);
-    l->setPosition(Vector3(0,-1,0));
-    l->setNormal(Vector3(0,1,0));
+    l->setDimensions(20,2);
+    l->setPosition(Vector3(0,2,0));
+    l->setNormal(Vector3(0,-1,0));
     l->setUdir(Vector3(1,0,0));
-    l->setWattage(100);
+    l->setWattage(1000);
 	l->setColor(Vector3(1.f));
 
     g_scene->addObject(l);
 	g_scene->addLight(l);
 
+	// Floor
+	BuildSquare(Vector3(-1,-1,-1), Vector3(1,-1,1), Vector3(0,1,0), new Phong(Vector3(0.75)));
+	
+	// Back Wall
+	BuildSquare(Vector3(-1,-1,1), Vector3(1,1,1), Vector3(0,0,-1), new Phong(Vector3(0.75)));
+
+	// Left Wall
+	BuildSquare(Vector3(-1,-1,-1), Vector3(-1,1,1), Vector3(1,0,0), new Phong(Vector3(1), Vector3(0.75)));
+
+	// Right Wall
+	BuildSquare(Vector3(1,-1,-1), Vector3(1,1,1), Vector3(-1,0,0), new Phong(Vector3(0.75)));
+
+	// Ceiling
+	BuildSquare(Vector3(0.05,1,-1), Vector3(1,1,1), Vector3(0,-1,0), new Phong(0.75));
+	BuildSquare(Vector3(-0.95,1,-1), Vector3(0,1,1), Vector3(0,-1,0), new Phong(0.75));
+
+	/*
     // mirror
     TriangleMesh * mirror = new TriangleMesh;
     mirror->createSingleTriangle();
@@ -106,6 +155,7 @@ makeTask3Scene()
     t2->setMesh(square2);
     t2->setMaterial(new Phong(Vector3(1), Vector3(0))); 
     g_scene->addObject(t2);
+	*/
 
     g_scene->preCalc();
 

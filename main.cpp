@@ -55,9 +55,7 @@ int mode = 0;
 
 cout << "Mode: " << mode << endl;
 
-//makeTask3Scene();
-
-makeCornellScene();
+makeTask3Scene();
 
 if (mode == 0)
 {
@@ -76,9 +74,9 @@ else if (mode == 1)
 else
 {
     cout << "Alternative tasks" << endl;
-//    a2task1();
-//    a2task2();
-//    a2task3();
+//    a3task1();
+//    a3task2();
+//    a3task3();
 }
 
 #ifndef NO_FREEIMAGE
