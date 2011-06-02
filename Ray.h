@@ -88,22 +88,7 @@ class Ray
         {
             Vector3 dir = alignHemisphereToVector(v, theta, phi);
 
-            return Ray(origin + epsilon*dir, dir);
-
-            //convert spherical coords to cartesian coords
-           /* float u1 = sin(phi) * cos(theta);
-            float u2 = sin(phi) * sin(theta);
-            float u3 = cos(phi);
-
-            //determine one surface tangent from cross of v and one of the unit vectors 
-            Vector3 t1 = cross(Vector3(0,0,1), v);
-            if (t1.length2() < 1e-6) t1 = cross(Vector3(0, 1, 0), v);
-
-            //Aligned direction determined by combination of cartesian coordiantes along tangents
-            Vector3 aligned_d(u1*t1 + u2*cross(t1, v) + u3*v);
-
-            aligned_d.normalize();
-            return Ray(origin + aligned_d * epsilon, aligned_d);*/
+            return Ray(origin, dir);
         }
 
         Ray diffuse(const HitInfo & hitInfo) const
@@ -118,7 +103,7 @@ class Ray
             Ray random = alignToVector(hitInfo.N, hitInfo.P, theta, phi);
             random.isDiffuse = true;
 
-            random.o += random.d*epsilon;
+//            random.o += random.d*epsilon;
 
             return random;
         }
@@ -143,7 +128,8 @@ class Ray
 #else
             Vector3 d_r = d - 2 * dot(hitInfo.N, d) * hitInfo.N;
 			d_r.normalize();
-            Ray reflect(hitInfo.P + d_r * epsilon, d_r);
+// + d_r * epsilon
+            Ray reflect(hitInfo.P, d_r);
             return reflect;
 #endif
         }
@@ -222,7 +208,8 @@ class Ray
 
             return alignToVector(d_r, hitInfo.P, theta, phi);
             #else
-            return Ray(hitInfo.P + d_r * epsilon, d_r);
+// + d_r * epsilon
+            return Ray(hitInfo.P, d_r);
             #endif
         }
 

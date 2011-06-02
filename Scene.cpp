@@ -137,6 +137,7 @@ Scene::raytraceImage(Camera *cam, Image *img)
 				{
 					shadeResult += tempShadeResult;
 				}
+
 				#ifdef STATS
 				Stats::Primary_Rays++;
 				#endif
@@ -233,6 +234,8 @@ Scene::trace(HitInfo& minHit, const Ray& ray, float tMin, float tMax) const
         }
     }
 
+    minHit.P -= ray.d*epsilon;
+
     if (result)
     {
         //Bump mapping
@@ -292,8 +295,7 @@ bool Scene::traceScene(const Ray& ray, Vector3& shadeResult, int depth)
                 return true;
             }
 
-            //shadeResult = hitInfo.material->shade(ray, hitInfo, *this);
-            shadeResult = hitInfo.material->shade(ray, hitInfo, *this);
+//            shadeResult = hitInfo.material->shade(ray, hitInfo, *this);
             double prob[3];
             prob[0] = hitInfo.material->getDiffuse().average();
             prob[1] = prob[0] + hitInfo.material->getReflection().average();
