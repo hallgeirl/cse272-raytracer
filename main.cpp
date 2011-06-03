@@ -41,6 +41,7 @@ main(int argc, char*argv[])
 #ifdef LINUX
     srand48(time(0));
 #endif
+    srand(time(0));
 //mode = 0: Create opengl window and everything
 //mode = 1: Render scenes without any GUI
 //mode = 2: Other things
@@ -51,6 +52,11 @@ int mode = 0;
 #endif
 #if defined(ALTERNATIVE)
     mode = 2;
+#endif
+
+bool metropolis = false;
+#ifdef METROPOLIS
+metropolis = true;
 #endif
 
 cout << "Mode: " << mode << endl;
@@ -68,7 +74,10 @@ else if (mode == 1)
     //A1makeTeapotScene();
     cout << "Rendering without display" << endl;
     g_camera->setRenderer(Camera::RENDER_RAYTRACE);
-    g_camera->click(g_scene, g_image);
+    if (!metropolis)
+        g_camera->click(g_scene, g_image);
+    else
+        a3task3();
     g_image->writePPM();
 }
 else

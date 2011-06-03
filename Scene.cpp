@@ -1,6 +1,7 @@
 #include "Utility.h"
 #include <cmath>
 #include <iostream>
+#include <fstream>
 #include "Miro.h"
 #include "Scene.h"
 #include "Camera.h"
@@ -93,7 +94,9 @@ Scene::preCalc()
 
 inline float tonemapValue(float value, float maxIntensity)
 {
-    return value;
+    value = min(max(value,0.f), 1.f);
+    return pow(value, 1./2.2);
+//    return value;
 //    return sigmoid(20*value-2.5);
     //return std::min(pow(value / maxIntensity, 0.35f)*1.1f, 1.0f);
 }
@@ -104,7 +107,7 @@ Scene::raytraceImage(Camera *cam, Image *img)
 	int depth = TRACE_DEPTH;
     float minIntensity = infinity, maxIntensity = -infinity;
 
-
+    
     printf("Rendering Progress: %.3f%%\r", 0.0f);
     fflush(stdout);
 
@@ -182,6 +185,11 @@ Scene::raytraceImage(Camera *cam, Image *img)
     debug("Performing tone mapping...");
     t1 += getTime();
 
+    ofstream img_raw("pathtracing.raw", ios::binary);
+
+    img_raw.write((char*)&width, 4);
+    img_raw.write((char*)&height, 4);
+
     #ifdef OPENMP
     #pragma omp parallel for
     #endif
@@ -190,6 +198,11 @@ Scene::raytraceImage(Camera *cam, Image *img)
         for (int j = 0; j < width; ++j)
         {
             Vector3 finalColor = tempImage[i*width+j];
+
+            //store raw data in rgb tuples
+            img_raw.write((char*)&finalColor.x, sizeof(float));
+            img_raw.write((char*)&finalColor.y, sizeof(float));
+            img_raw.write((char*)&finalColor.z, sizeof(float));
 
             #pragma unroll(3)
             for (int k = 0; k < 3; k++)
@@ -205,6 +218,7 @@ Scene::raytraceImage(Camera *cam, Image *img)
         img->drawScanline(i);
         #endif
     }
+    img_raw.close();
 
     printf("Rendering Progress: 100.000%%\n");
     debug("Done raytracing!\n");

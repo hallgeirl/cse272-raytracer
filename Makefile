@@ -13,7 +13,7 @@ PLOTS=$(patsubst %.p,%.pdf,$(shell ls *.p 2> /dev/null))
 
 CXXFLAGS += -DLINUX -g
 
-assignment2.o: assignment2.h
+assignment3.o: assignment3.h
 
 # 
 # lexer.cpp: lexer.lex
