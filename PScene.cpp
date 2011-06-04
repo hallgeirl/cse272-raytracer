@@ -2,12 +2,12 @@
 #include <cmath>
 #include <iostream>
 #include "Miro.h"
-#include "Scene.h"
+#include "PScene.h"
 #include "Camera.h"
 #include "Image.h"
 #include "Console.h"
 #include "Sphere.h"
-#include "DirectionalAreaLight.h"
+#include "SquareLight.h"
 
 #ifdef STATS
 #include "Stats.h"
@@ -75,18 +75,6 @@ Scene::preCalc()
     t1 += getTime();
     debug("Done building BVH. Time spent: %lf\n", t1);
 
-    debug("Generating photon map... Number of photons: %d\n", PhotonsPerLightSource);
-    t1 = -getTime();
-
-#ifdef PHOTON_MAPPING
-    //Generate photon map
-    tracePhotons();
-	traceCausticPhotons();
-#endif
-
-	t1 += getTime();
-    debug("Done generating photon map. Time spent: %f\n", t1);
-
 }
 
 inline float tonemapValue(float value, float maxIntensity)
@@ -102,7 +90,6 @@ Scene::raytraceImage(Camera *cam, Image *img)
 	int depth = TRACE_DEPTH;
     float minIntensity = infinity, maxIntensity = -infinity;
 
-
     printf("Rendering Progress: %.3f%%\r", 0.0f);
     fflush(stdout);
 
@@ -112,65 +99,28 @@ Scene::raytraceImage(Camera *cam, Image *img)
 
     double t1 = -getTime();
 
-
     // loop over all pixels in the image
     #ifdef OPENMP
     #pragma omp parallel for schedule(dynamic, 2)
     #endif
     for (int i = 0; i < height; ++i)
     {
-        float localMaxIntensity = -infinity,
-              localMinIntensity = infinity;
-
         for (int j = 0; j < width; ++j)
         {
             Ray ray;
-            Vector3 tempShadeResult;
             Vector3 shadeResult(0.f);
 
-			#if defined (PATH_TRACING) || defined(DOF)
-			for (int k = 0; k < TRACE_SAMPLES; ++k)
-			{
-                ray = cam->eyeRay(j, i, width, height, false);
-				if (traceScene(ray, tempShadeResult, depth))
-				{
-					shadeResult += tempShadeResult;
-				}
-				#ifdef STATS
-				Stats::Primary_Rays++;
-				#endif
-			}
-			shadeResult /= TRACE_SAMPLES; 
-            tempImage[i*width+j] = shadeResult;
-			#else
             ray = cam->eyeRay(j, i, width, height, false);
-			if (traceScene(ray, shadeResult, depth))
-			{
-                tempImage[i*width+j] = shadeResult;
-			}
-            else
+
+			// Add an empty measurement point if the ray does not hit the scene
+			if (!traceScene(ray, shadeResult, depth))
             {
-                tempImage[i*width+j] = m_bgColor;
+                g_scene->addHitPoint(new HitPoint());
             }
 
 			#ifdef STATS
 			Stats::Primary_Rays++;
 			#endif
-			#endif // PATH_TRACING
-            for (int k = 0; k < 3; k++)
-            {
-                if (shadeResult[k] > localMaxIntensity)
-                    localMaxIntensity = shadeResult[k];
-                if (shadeResult[k] < localMinIntensity)
-                    localMinIntensity = shadeResult[k];
-            }
-            #ifdef OPENMP
-            #pragma omp critical
-			#endif
-            {
-                if (localMinIntensity < minIntensity) minIntensity = localMinIntensity;
-                if (localMaxIntensity > maxIntensity) maxIntensity = localMaxIntensity;
-            }
 
         }
         #ifdef OPENMP
@@ -181,8 +131,16 @@ Scene::raytraceImage(Camera *cam, Image *img)
             fflush(stdout);
         }
     }
-    debug("Performing tone mapping...");
     t1 += getTime();
+    debug("Performing Adaptive passes...");
+
+    t1 = -getTime();
+	//AdaptivePhotonPasses();
+    t1 += getTime();
+
+	RenderPhotonStats(tempImage, width, height, minIntensity, maxIntensity);
+
+    debug("Performing tone mapping...");
 
     #ifdef OPENMP
     #pragma omp parallel for
@@ -282,31 +240,18 @@ bool Scene::traceScene(const Ray& ray, Vector3& shadeResult, int depth)
     
     if (depth >= 0)
     {
-		// AL: shouldn't decrementing depth be independent if there was a trace hit?
 		if (trace(hitInfo, ray))
 		{
             hit = true;
 
 			--depth;
 
-			shadeResult = hitInfo.material->shade(ray, hitInfo, *this);
-
 			//if diffuse material, send trace with RandomRay generate by Monte Carlo
 			if (hitInfo.material->isDiffuse())
 			{
-#ifdef PATH_TRACING
+				g_scene->addHitPoint(new HitPoint(hitInfo.P, hitInfo.N, ray.d, hitInfo.material->getDiffuse()[0]/PI, 0.25f));
 
-				Vector3 diffuseResult;
-				Ray diffuseRay = ray.random(hitInfo);
-
-				if (traceScene(diffuseRay, diffuseResult, depth))
-				{
-					shadeResult += (hitInfo.material->getDiffuse() * diffuseResult);
-
-				}
-#endif
-
-#ifdef PHOTON_MAPPING
+/*#ifdef PHOTON_MAPPING
 
 				float pos[3] = {hitInfo.P.x, hitInfo.P.y, hitInfo.P.z};
 				float normal[3] = {hitInfo.N.x, hitInfo.N.y, hitInfo.N.z};
@@ -318,7 +263,7 @@ bool Scene::traceScene(const Ray& ray, Vector3& shadeResult, int depth)
 
                 //irradiance_estimate does the dividing by PI and all that
 				shadeResult += Vector3(irradiance[0]+caustic[0], irradiance[1]+caustic[1], irradiance[2]+caustic[2]);
-#endif
+#endif*/
 			}
 			
 			//if reflective material, send trace with ReflectRay
@@ -370,9 +315,283 @@ bool Scene::traceScene(const Ray& ray, Vector3& shadeResult, int depth)
     return hit;
 }
 
+float MutatePath(const float MutationSize)
+{
+	return ((2 * frand() - 1) > 0 ? 1 : -1) * pow(frand(), 1.f/MutationSize+1);
+}
+
+float ApplyDeltaRange(const float delta, float value, const float x1, const float x2)
+{
+	float range = x2 - x1;
+    float delta_ = delta;
+    /*if (delta < -range) delta_ = -range;
+    if (delta > range) delta_ = range;*/
+    float result = value + delta_;
+    
+	if (result < x1)
+		result += range;
+	else if ( result > x2)
+		result -= range;
+/*    if (delta > 1000 || delta < -1000)
+        cout << delta << endl; */
+
+	return result;
+}
+
+bool Scene::UpdateMeasurementPoints(const Vector3& pos, const Vector3& power)
+{
+	bool hit = false;
+
+	for (int n = 0; n <  g_scene->hitpoints()->size(); ++n)
+	{
+		HitPoint *hp = (*g_scene->hitpoints())[n];
+
+		// skip the measurement points that did not hit a surface
+		if (!hp->bHit)
+			continue;
+
+		float d = sqrt(pow(pos.x - hp->position.x, 2) +
+			pow(pos.y - hp->position.y, 2) +
+			pow(pos.z - hp->position.z, 2));
+
+		if (d <= hp->radius)
+		{
+			//wait to update radius and flux
+			hp->newPhotons++;
+			hp->newFlux += power.x;
+
+			// can hit multiple measurement points	
+			hit = true;
+		}
+	}
+	return hit;
+}
+
+void Scene::UpdatePhotonStats()
+{
+    cout << "Alphas:" << endl;
+	for (int n = 0; n < g_scene->hitpoints()->size(); ++n)
+	{
+		HitPoint *hp = (*g_scene->hitpoints())[n];
+		if (!hp->bHit)
+			continue;
+
+        double f_alpha = (long double)hp->accPhotons*5e-6;
+
+        float alpha = PHOTON_ALPHA + (1.-PHOTON_ALPHA)*(1.-exp(-f_alpha));
+        cout << alpha << "\t";
+
+        // Set scaling factor for next photon pass
+        float A = PI * pow(hp->radius, 2);
+        float A1 = A;
+
+        CircleSegment(Vector3(-1,0,-1), Vector3(0,0,1), hp->radius, hp->position, A1); 
+        CircleSegment(Vector3(1,0,-1), Vector3(0,0,1), hp->radius, hp->position, A1);
+        (*g_scene->hitpoints())[n]->scaling = A1/A;
+		
+		// only adding a ratio of the newly added photons
+		float delta = (hp->accPhotons + alpha * hp->newPhotons)/(hp->accPhotons + hp->newPhotons);
+		hp->radius *= sqrt(delta);
+		hp->accPhotons += (int)(alpha * hp->newPhotons);
+		
+		// not sure about this flux acc, or about calculating the irradiance
+		hp->accFlux = ( hp->accFlux + hp->newFlux/hp->scaling) * delta;	
+
+		// reset new values
+		hp->newPhotons = 0;
+		hp->newFlux = 0.f;
+	}
+    cout << endl;
+}
+
+//void PrintPhotonStats(ofstream& fp, const float photonsEmitted, const float m_photonsUniform)
+void Scene::PrintPhotonStats()
+{
+	for (int n = 0; n <  g_scene->hitpoints()->size(); ++n)
+	{
+		HitPoint *hp = (*g_scene->hitpoints())[n];
+
+		long double A = PI * pow(hp->radius, 2);
+
+		long double result = hp->accFlux / A / (long double)m_photonsEmitted * ((long double)m_photonsUniform / (long double)m_photonsEmitted);
+	}
+}
+
+void Scene::RenderPhotonStats(Vector3 *tempImage, const int width, const int height, float minIntensity, float maxIntensity)
+{
+	float localMaxIntensity = -infinity, localMinIntensity = infinity;
+
+	int n;
+	for (n = 0; n <  g_scene->hitpoints()->size(); ++n)
+	{
+		HitPoint *hp = (*g_scene->hitpoints())[n];
+
+		if (!hp->bHit)
+		{
+			tempImage[n] = m_bgColor;
+			continue;
+		}
+
+		tempImage[n] = Vector3(1.f);
+
+		/*
+
+		long double A = PI * pow(hp->radius, 2);
+
+		long double result = hp->accFlux / A / m_photonsEmitted * (m_photonsUniform / m_photonsEmitted);
+
+		tempImage[n] = Vector3(result);
+
+		if (tempImage[n].x < minIntensity) minIntensity = tempImage[n].x;
+        if (tempImage[n].x > maxIntensity) maxIntensity = tempImage[n].x;*/
+	}
+	if (n != (width*height))
+		debug("Measurement points do not equal image dimensions");
+
+	/*for (int k = 0; k < 3; k++)
+    {
+        if (shadeResult[k] > localMaxIntensity)
+            localMaxIntensity = shadeResult[k];
+        if (shadeResult[k] < localMinIntensity)
+            localMinIntensity = shadeResult[k];
+    }*/
+}
+
+
+bool Scene::SamplePhotonPath(const Ray& path, const Vector3& power)
+{
+    HitInfo hitInfo(0, path.o, Vector3(0,1,0));
+
+	Ray ray(path.o, path.d);
+
+    while (true)
+    {
+        if (g_scene->trace(hitInfo, ray, 0, MIRO_TMAX))
+        {
+			//return if hit triangle backface
+			if (dot(ray.d, hitInfo.N) > 0)
+				return false;
+
+            //hit diffuse surface->we're done
+            if (!hitInfo.material->isReflective())
+            {
+                return UpdateMeasurementPoints(hitInfo.P, power);
+            }
+            //hit reflective surface => reflect and trace again
+            else 
+            {
+                ray = ray.reflect(hitInfo);
+            }
+        }
+        //Missed the scene
+        else 
+        {
+            return false;
+        }
+    }
+}
+
+void Scene::AdaptivePhotonPasses()
+{
+	PointLight *light = m_lights[0];
+	
+    Vector3 power = light->color() * light->wattage(); 
+	Ray goodPath;
+	float prev_di = 1;
+	long mutated = 1;
+	long accepted = 0;
+
+    int Nphotons = 100000;
+
+	//find starting good path
+	do
+	{
+        goodPath.o = light->samplePhotonOrigin();
+        goodPath.d = light->samplePhotonDirection();
+	} while (!SamplePhotonPath(goodPath, power));
+
+    long double msq = 0;
+	for (m_photonsEmitted = 0; m_photonsEmitted < Nphotons; m_photonsEmitted++)
+    {
+		printf("photons emitted: %d\n", m_photonsEmitted);
+		if (m_photonsEmitted > 0 && m_photonsEmitted % 1000000 == 0)
+		{
+			UpdatePhotonStats();
+		}
+        /*if (m_photonsEmitted > 0 && m_photonsEmitted % 100000 == 0)
+        {
+			PrintPhotonStats();
+        }*/
+
+        //Test random photon path
+        Ray path(light->samplePhotonOrigin(), light->samplePhotonDirection());
+		if (SamplePhotonPath(path, power))
+		{
+			goodPath = path;
+			++m_photonsUniform;
+			continue;
+		}
+
+		//Mutatation size
+		long double di = prev_di + (1. / (long double)mutated) * ((long double)accepted/(long double)mutated - 0.234);
+
+		// Convert to spherical coords (theta phi reversed)
+		float phi = acos(goodPath.d.z);
+		float theta = atan2(goodPath.d.y, goodPath.d.x);
+
+		// add mutation and convert back to cartesian coords
+		path.d = alignHemisphereToVector(Vector3(0,1,0), ApplyDeltaRange(MutatePath(di),theta, 0.f, 2.*PI), ApplyDeltaRange(MutatePath(di), phi, 0, PI/2.)); 
+        float mut = MutatePath(di); 
+		path.o.x = ApplyDeltaRange(mut, goodPath.o.x, -1.75, 1.75);
+		path.o.z = ApplyDeltaRange(MutatePath(di), goodPath.o.z, -0.05, 0.05);
+
+		++mutated;
+		prev_di = di;
+
+		// Test mutated photon path
+		if (SamplePhotonPath(path, power))
+		{
+			goodPath = path;
+			++accepted;
+			continue;
+		}
+		// Reuse good path
+		SamplePhotonPath(goodPath, power);		
+    }
+
+	UpdatePhotonStats();
+	PrintPhotonStats();
+}
+
+void Scene::ProgressivePhotonPass()
+{
+	traceProgressivePhotons();
+	
+	//iterate throuhg all of the scene hitpoints
+	for (int n = 0; n < m_hitpoints.size(); ++n)
+	{
+		HitPoint *hp = m_hitpoints[n];
+
+		float pos[3] = {hp->position.x, hp->position.y, hp->position.z};
+		float normal[3] = {hp->normal.x, hp->normal.y, hp->normal.z};
+		float irradiance[3] = {0,0,0};
+    
+		int M = m_photonMap.irradiance_estimate(irradiance, pos, normal, hp->radius, PHOTON_SAMPLES, false);
+		
+		//only adding a ratio of the newly added photons
+		float delta = (hp->accPhotons + PHOTON_ALPHA * M)/(hp->accPhotons + M);
+		hp->radius *= sqrt(delta);
+		hp->accPhotons += (int)(PHOTON_ALPHA * M);
+		
+		//not sure about this flux acc, or about calculating the irradiance
+		hp->accFlux = ( hp->accFlux + irradiance[0]/hp->scaling ) * delta;	
+	}
+
+	m_photonMap.empty();
+} 
 
 //Shoot out all photons and trace them
-void Scene::tracePhotons()
+void Scene::traceProgressivePhotons()
 {
     if (PhotonsPerLightSource == 0) 
     {
@@ -380,114 +599,30 @@ void Scene::tracePhotons()
         return;
     }
     
-    printf("Photon Map Progress: %.3f%%\r", 0.0f);
-    int totalPhotons = 0; //Total photons emitted
     int photonsAdded = 0; //Photons added to the scene
     
     for (int l = 0; l < m_lights.size(); l++)
     {
         PointLight *light = m_lights[l];
-        
-        //Temporary hack
-        if (dynamic_cast<DirectionalAreaLight*>(light) == 0) continue;
-        
-        while (photonsAdded < PhotonsPerLightSource)
+    
+        #ifdef OPENMP
+        #pragma omp parallel for
+        #endif
+        for (int i = 0; i < PhotonsPerLightSource; i++)
         {
-            #ifdef OPENMP
-            #pragma omp parallel for
-            #endif
-            for (int i = 0; i < 10000; i++)
-            {
-                if (photonsAdded < PhotonsPerLightSource)
-                {
-                    //Create a new photon
-                    Vector3 power = light->color() * light->wattage(); 
-                    DirectionalAreaLight *dl = dynamic_cast<DirectionalAreaLight*>(light);
-                    if (dl != 0)
-                    {
-                         power *= PI * dl->getRadius() * dl->getRadius();
-                    }
-                    Vector3 dir = light->samplePhotonDirection();
-                    Vector3 pos = light->samplePhotonOrigin();
-                    int photons = tracePhoton(pos, dir, power, 0);
-                    
-                    #pragma omp critical
-                    {
-                        photonsAdded += photons;
-                        totalPhotons ++;
-                    }
-                    
-                    if (i % 1000 == 0)
-                        printf("Photon Map Progress: %.3f%%\r", 100.0f*((float)photonsAdded+PhotonsPerLightSource*l)/(float)(PhotonsPerLightSource*m_lights.size()));
-                }
-            }
+            //Create a new photon
+            Vector3 power = light->color() * light->wattage(); 
+            Vector3 dir = light->samplePhotonDirection();
+            Vector3 pos = light->samplePhotonOrigin();
+			//printf("squarelight photon position: %f %f %f and direction %f %f %f \n", pos.x, pos.y, pos.z, dir.x, dir.y, dir.z);
+            tracePhoton(pos, dir, power, 0);
         }
+
+		m_photonsEmitted += PhotonsPerLightSource;
     }
-    m_photonMap.scale_photon_power(1.0f/(float)totalPhotons);
-    printf("Photon Map Progress: %.3f%%\n", 100.0f);
+	// do not scale photons in progressive photon mapping
+    // m_photonMap.scale_photon_power(1.0f/(float)totalPhotons);
     m_photonMap.balance();
-    #ifdef VISUALIZE_PHOTON_MAP
-    debug("Rebuilding BVH for visualization. Number of objects: %d\n", m_objects.size());
-    m_bvh.build(&m_objects);
-
-    #endif
-}
-
-//Shoot out all caustic photons and trace them -- brute force method
-void Scene::traceCausticPhotons()
-{
-    if (CausticPhotonsPerLightSource == 0) 
-    {
-        m_causticMap.balance();
-        return;
-    }
-    
-    printf("Caustic Map Progress: %.3f%%\r", 0.0f);
-    int totalPhotons = 0; //Total photons emitted
-    int photonsAdded = 0; //Photons added to the scene
-    
-    for (int l = 0; l < m_lights.size(); l++)
-    {
-        PointLight *light = m_lights[l];
-        
-        //Temporary hack
-        if (dynamic_cast<DirectionalAreaLight*>(light) == 0) continue;
-        
-        while (photonsAdded < CausticPhotonsPerLightSource)
-        {
-            #ifdef OPENMP
-            #pragma omp parallel for
-            #endif
-            for (int i = 0; i < 10000; i++)
-            {
-                if (photonsAdded < CausticPhotonsPerLightSource)
-                {
-                    //Create a new photon
-                    Vector3 power = light->color() * light->wattage(); 
-                    DirectionalAreaLight *dl = dynamic_cast<DirectionalAreaLight*>(light);
-                    if (dl != 0)
-                    {
-                         power *= PI * dl->getRadius() * dl->getRadius() / 10.f;
-                    }
-                    Vector3 dir = light->samplePhotonDirection();
-                    Vector3 pos = light->samplePhotonOrigin();
-                    int photons = tracePhoton(pos, dir, power, 0, true);
-                    
-                    #pragma omp critical
-                    {
-                        photonsAdded += photons;
-                        totalPhotons ++;
-                    }
-                    
-                    if (i % 1000 == 0)
-                        printf("Caustic Map Progress: %.3f%%\r", 100.0f*((float)photonsAdded+CausticPhotonsPerLightSource*l)/(float)(CausticPhotonsPerLightSource*m_lights.size()));
-                }
-            }
-        }
-    }
-    m_causticMap.scale_photon_power(1.0f/(float)totalPhotons);
-    printf("Caustic Map Progress: %.3f%%\n", 100.0f);
-    m_causticMap.balance();
     #ifdef VISUALIZE_PHOTON_MAP
     debug("Rebuilding BVH for visualization. Number of objects: %d\n", m_objects.size());
     m_bvh.build(&m_objects);
@@ -571,8 +706,6 @@ int Scene::tracePhoton(const Vector3& position, const Vector3& direction, const 
 #ifdef STATS
 			Stats::Photon_Bounces++;
 #endif
-			// only one bounce for Assignment 2 -- task 2
-			return nPhotons;
             //Shoot out a new diffuse photon
             Ray r = ray.diffuse(hit);
             HitInfo diffHit;

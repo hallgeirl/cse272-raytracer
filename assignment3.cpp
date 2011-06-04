@@ -75,8 +75,8 @@ makeTask3Scene()
 	l->setColor(Vector3(1.f));
 
     g_scene->addObject(l);
-	g_scene->addLight(l);
-
+	g_scene->addLight(l);    
+	
 	// Floor
 	BuildSquare(Vector3(-1,-1,-1), Vector3(1,-1,1), Vector3(0,1,0), new Phong(Vector3(0.75)));
 	
@@ -84,7 +84,8 @@ makeTask3Scene()
 	BuildSquare(Vector3(-1,-1,1), Vector3(1,1,1), Vector3(0,0,-1), new Phong(Vector3(0.75)));
 
 	// Left Wall
-	BuildSquare(Vector3(-1,-1,-1), Vector3(-1,1,1), Vector3(1,0,0), new Phong(Vector3(1), Vector3(0.75)));
+	//BuildSquare(Vector3(-1,-1,-1), Vector3(-1,1,1), Vector3(1,0,0), new Phong(Vector3(1), Vector3(0.75)));
+	BuildSquare(Vector3(-1,-1,-1), Vector3(-1,1,1), Vector3(1,0,0), new Phong(Vector3(0.75)));
 
 	// Right Wall
 	BuildSquare(Vector3(1,-1,-1), Vector3(1,1,1), Vector3(-1,0,0), new Phong(Vector3(0.75)));
@@ -93,89 +94,7 @@ makeTask3Scene()
 	BuildSquare(Vector3(0.05,1,-1), Vector3(1,1,1), Vector3(0,-1,0), new Phong(0.75));
 	BuildSquare(Vector3(-0.95,1,-1), Vector3(0,1,1), Vector3(0,-1,0), new Phong(0.75));
 
-	/*
-    // mirror
-    TriangleMesh * mirror = new TriangleMesh;
-    mirror->createSingleTriangle();
-    mirror->setV1(Vector3( -2, 1, -2));
-    mirror->setV2(Vector3( 2, 1, -2));
-    mirror->setV3(Vector3( 2, 1, 2));
-    mirror->setN1(Vector3(0, -1, 0));
-    mirror->setN2(Vector3(0, -1, 0));
-    mirror->setN3(Vector3(0, -1, 0));
-    
-    Triangle* t = new Triangle;
-    t->setIndex(0);
-    t->setMesh(mirror);
-    t->setMaterial(new Phong(Vector3(0), Vector3(1))); 
-    g_scene->addObject(t);
-
-	TriangleMesh * mirror2 = new TriangleMesh;
-    mirror2->createSingleTriangle();
-    mirror2->setV1(Vector3( -2, 1, -2));
-    mirror2->setV2(Vector3( 2, 1, 2));
-    mirror2->setV3(Vector3( -2, 1, 2));
-    mirror2->setN1(Vector3(0, -1, 0));
-    mirror2->setN2(Vector3(0, -1, 0));
-    mirror2->setN3(Vector3(0, -1, 0));
-
-    Triangle* t2 = new Triangle;
-    t2->setIndex(0);
-    t2->setMesh(mirror2);
-    t2->setMaterial(new Phong(Vector3(0), Vector3(1))); 
-    g_scene->addObject(t2);
-
-	// floor triangle
-    TriangleMesh * square1 = new TriangleMesh;
-    square1->createSingleTriangle();
-    square1->setV1(Vector3( -1, 0, -1));
-    square1->setV2(Vector3( 1, 0, 1));
-    square1->setV3(Vector3( 1, 0, -1));
-    square1->setN1(Vector3(0, 1, 0));
-    square1->setN2(Vector3(0, 1, 0));
-    square1->setN3(Vector3(0, 1, 0));
-    
-    t = new Triangle;
-    t->setIndex(0);
-    t->setMesh(square1);
-    t->setMaterial(new Phong(Vector3(1), Vector3(0))); 
-    g_scene->addObject(t);
-
-	TriangleMesh * square2 = new TriangleMesh;
-    square2->createSingleTriangle();
-    square2->setV1(Vector3( -1, 0, -1));
-    square2->setV2(Vector3( -1, 0, 1));
-    square2->setV3(Vector3( 1, 0, 1));
-    square2->setN1(Vector3(0, 1, 0));
-    square2->setN2(Vector3(0, 1, 0));
-    square2->setN3(Vector3(0, 1, 0));
-
-    t2 = new Triangle;
-    t2->setIndex(0);
-    t2->setMesh(square2);
-    t2->setMaterial(new Phong(Vector3(1), Vector3(0))); 
-    g_scene->addObject(t2);
-	*/
-
     g_scene->preCalc();
-
-	// initialize measurement points from A to B 
-	// might be issue with radii large than floor
-	HitPoint *hp;
-	int N = 100;
-	
-	for (int i = 0; i < N; ++i)
-	{
-		hp = new HitPoint;
-		hp->position = Vector3(2.*(float)i/((float)N-1.)-1., 0.f, 0.f);
-		hp->normal = Vector3(0, 1, 0);
-		hp->radius = 0.25f;
-		//hp->radius = 0.5;
-        hp->scaling = 1.;
-
-		// for task 2
-		g_scene->addHitPoint(hp);
-	}
 }
 
 sample samplePath(const Vector3& origin, const Vector3& direction)
@@ -283,138 +202,12 @@ void a3task1()
     }
 }
 
-float MutatePath(const float MutationSize)
-{
-	return ((2 * frand() - 1) > 0 ? 1 : -1) * pow(frand(), 1.f/MutationSize+1);
-}
 
-float ApplyDeltaRange(const float delta, float value, const float x1, const float x2)
-{
-	float range = x2 - x1;
-    float delta_ = delta;
-    /*if (delta < -range) delta_ = -range;
-    if (delta > range) delta_ = range;*/
-    float result = value + delta_;
-    
-	if (result < x1)
-		result += range;
-	else if ( result > x2)
-		result -= range;
-/*    if (delta > 1000 || delta < -1000)
-        cout << delta << endl; */
-
-	return result;
-}
-
-bool UpdateMeasurementPoints(const Vector3& pos, const Vector3& power)
-{
-	bool hit = false;
-
-	for (int n = 0; n <  g_scene->hitpoints()->size(); ++n)
-	{
-		HitPoint *hp = (*g_scene->hitpoints())[n];
-		float d = sqrt(pow(pos.x - hp->position.x, 2) +
-			pow(pos.y - hp->position.y, 2) +
-			pow(pos.z - hp->position.z, 2));
-
-		if (d <= hp->radius)
-		{
-			//wait to update radius and flux
-			hp->newPhotons++;
-			hp->newFlux += power.x;
-
-			// can hit multiple measurement points	
-			hit = true;
-		}
-	}
-	return hit;
-}
-
-void UpdatePhotonStats()
-{
-    cout << "Alphas:" << endl;
-	for (int n = 0; n < g_scene->hitpoints()->size(); ++n)
-	{
-		HitPoint *hp = (*g_scene->hitpoints())[n];
-        double f_alpha = (long double)hp->accPhotons*5e-6;
-
-        float alpha = PHOTON_ALPHA + (1.-PHOTON_ALPHA)*(1.-exp(-f_alpha));
-        cout << alpha << "\t";
-
-        // Set scaling factor for next photon pass
-        float A = PI * pow(hp->radius, 2);
-        float A1 = A;
-
-        CircleSegment(Vector3(-1,0,-1), Vector3(0,0,1), hp->radius, hp->position, A1); 
-        CircleSegment(Vector3(1,0,-1), Vector3(0,0,1), hp->radius, hp->position, A1);
-        (*g_scene->hitpoints())[n]->scaling = A1/A;
-		
-		// only adding a ratio of the newly added photons
-		float delta = (hp->accPhotons + alpha * hp->newPhotons)/(hp->accPhotons + hp->newPhotons);
-		hp->radius *= sqrt(delta);
-		hp->accPhotons += (int)(alpha * hp->newPhotons);
-		
-		// not sure about this flux acc, or about calculating the irradiance
-		hp->accFlux = ( hp->accFlux + hp->newFlux/hp->scaling) * delta;	
-
-		// reset new values
-		hp->newPhotons = 0;
-		hp->newFlux = 0.f;
-	}
-    cout << endl;
-}
-
-//void PrintPhotonStats(ofstream& fp, const float photonsEmitted, const float uniform)
-void PrintPhotonStats(stringstream ss[100], const long double photonsEmitted, const long double uniform)
-{
-	for (int n = 0; n <  g_scene->hitpoints()->size(); ++n)
-	{
-		HitPoint *hp = (*g_scene->hitpoints())[n];
-
-		long double A = PI * pow(hp->radius, 2);
-
-		long double result = hp->accFlux / A / photonsEmitted * (uniform / photonsEmitted);
-		
-		ss[n] << result << "\t";
-	}
-}
-
-bool SamplePhotonPath(const Ray& path, const Vector3& power)
-{
-    HitInfo hitInfo(0, path.o, Vector3(0,1,0));
-
-	Ray ray(path.o, path.d);
-
-    while (true)
-    {
-        if (g_scene->trace(hitInfo, ray, 0, MIRO_TMAX))
-        {
-			//return if hit triangle backface
-			if (dot(ray.d, hitInfo.N) > 0)
-				return false;
-
-            //hit diffuse surface->we're done
-            if (!hitInfo.material->isReflective())
-            {
-                return UpdateMeasurementPoints(hitInfo.P, power);
-            }
-            //hit reflective surface => reflect and trace again
-            else 
-            {
-                ray = ray.reflect(hitInfo);
-            }
-        }
-        //Missed the scene
-        else 
-        {
-            return false;
-        }
-    }
-}
 
 void a3task2()
 {
-    long double ptracing_output[100];
+
+    /*long double ptracing_output[100];
     ofstream msq_fp("adaptiveppm_msq.dat");
 
     //Get path tracing results from last iteration
@@ -438,96 +231,12 @@ void a3task2()
         }
     }
 
-	//find starting good path
-    Vector3 power = g_l->color() * g_l->wattage(); 
-	Ray goodPath;
-	int m_photonsEmitted;
-	float prev_di = 1;
-	long mutated = 1;
-	long accepted = 0;
-	long uniform = 0;
-
-    int Nphotons = 100000000;
-    const int N = 100;
-    stringstream ss_out[N];
-	do
-	{
-        goodPath.o = g_l->samplePhotonOrigin();
-        goodPath.d = g_l->samplePhotonDirection();
-	} while (!SamplePhotonPath(goodPath, power));
-
-    long double msq = 0;
-	for (m_photonsEmitted = 0; m_photonsEmitted < Nphotons; m_photonsEmitted++)
-    {
-
-		if (m_photonsEmitted > 0 && m_photonsEmitted % 1000000 == 0)
-		{
-			UpdatePhotonStats();
-            msq = 0;
-            for (int i = 0; i < N; i++)
-            {
-                HitPoint* hp = g_scene->hitpoints()->at(i);
-
-                long double A = PI * pow(hp->radius, 2);
-                long double result = hp->accFlux / A / (long double)m_photonsEmitted * ((long double)uniform / (long double)m_photonsEmitted);
-
-                long double err = result-ptracing_output[i];
-                long double err_sq = err*err;
-
-                msq += err_sq;
-            }
-            msq /= N;
-            msq_fp << m_photonsEmitted << " " << msq << endl;
-            cout << "Pass " << m_photonsEmitted / 100000 << " of " << Nphotons/100000 << ", msq=" << msq << endl;
-		}
-        if (m_photonsEmitted > 0 && m_photonsEmitted % 100000 == 0)
-        {
-			PrintPhotonStats(ss_out, m_photonsEmitted, (long double)uniform);
-        }
-
-        //Test random photon path
-        Ray path(g_l->samplePhotonOrigin(), g_l->samplePhotonDirection());
-		if (SamplePhotonPath(path, power))
-		{
-			goodPath = path;
-			++uniform;
-			continue;
-		}
-
-		//Mutatation size
-		long double di = prev_di + (1. / (long double)mutated) * ((long double)accepted/(long double)mutated - 0.234);
-
-		// Convert to spherical coords (theta phi reversed)
-		float phi = acos(goodPath.d.z);
-		float theta = atan2(goodPath.d.y, goodPath.d.x);
-
-		// add mutation and convert back to cartesian coords
-		path.d = alignHemisphereToVector(Vector3(0,1,0), ApplyDeltaRange(MutatePath(di),theta, 0.f, 2.*PI), ApplyDeltaRange(MutatePath(di), phi, 0, PI/2.)); 
-        float mut = MutatePath(di); 
-		path.o.x = ApplyDeltaRange(mut, goodPath.o.x, -1.75, 1.75);
-		path.o.z = ApplyDeltaRange(MutatePath(di), goodPath.o.z, -0.05, 0.05);
-
-		++mutated;
-		prev_di = di;
-
-		// Test mutated photon path
-		if (SamplePhotonPath(path, power))
-		{
-			goodPath = path;
-			++accepted;
-			continue;
-		}
-		// Reuse good path
-		SamplePhotonPath(goodPath, power);		
-    }
-
-	UpdatePhotonStats();
-	PrintPhotonStats(ss_out, m_photonsEmitted, uniform);
+	
 
     ofstream fp("adaptiveppm_irrad.dat");
     for (int i = 0; i < N; i++)
         fp << ss_out[i].str().c_str() << endl;
-    fp.close();
+    fp.close();*/
 }
 
 double mutate_value(double s1, double s2)

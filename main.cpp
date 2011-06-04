@@ -9,7 +9,11 @@
 #include <FreeImage.h>
 #include "Camera.h"
 #include "Image.h"
+#ifdef PHOTON_MAPPING
+#include "PScene.h"
+#else
 #include "Scene.h"
+#endif
 
 using namespace std;
 
