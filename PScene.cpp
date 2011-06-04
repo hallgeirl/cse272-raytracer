@@ -135,7 +135,7 @@ Scene::raytraceImage(Camera *cam, Image *img)
     debug("Performing Adaptive passes...");
 
     t1 = -getTime();
-	//AdaptivePhotonPasses();
+	AdaptivePhotonPasses();
     t1 += getTime();
 
 	RenderPhotonStats(tempImage, width, height, minIntensity, maxIntensity);
@@ -342,7 +342,7 @@ bool Scene::UpdateMeasurementPoints(const Vector3& pos, const Vector3& power)
 {
 	bool hit = false;
 
-	for (int n = 0; n <  g_scene->hitpoints()->size(); ++n)
+	for (int n = 0; n <  m_hitpoints->size(); ++n)
 	{
 		HitPoint *hp = (*g_scene->hitpoints())[n];
 
@@ -432,10 +432,6 @@ void Scene::RenderPhotonStats(Vector3 *tempImage, const int width, const int hei
 			continue;
 		}
 
-		tempImage[n] = Vector3(1.f);
-
-		/*
-
 		long double A = PI * pow(hp->radius, 2);
 
 		long double result = hp->accFlux / A / m_photonsEmitted * (m_photonsUniform / m_photonsEmitted);
@@ -443,7 +439,7 @@ void Scene::RenderPhotonStats(Vector3 *tempImage, const int width, const int hei
 		tempImage[n] = Vector3(result);
 
 		if (tempImage[n].x < minIntensity) minIntensity = tempImage[n].x;
-        if (tempImage[n].x > maxIntensity) maxIntensity = tempImage[n].x;*/
+        if (tempImage[n].x > maxIntensity) maxIntensity = tempImage[n].x;
 	}
 	if (n != (width*height))
 		debug("Measurement points do not equal image dimensions");
