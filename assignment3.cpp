@@ -140,8 +140,13 @@ sample samplePath(const path& p, int w, int h)
     PointLight* l;
     Vector3 contribution(1./PI,1./PI,1./PI); //Current contribution (decreases if surface we hit has reflectance < 1)
 
+    bool specular = false;
+    bool diffuse = false;
+
+    static int nrays = 0;
+    nrays++;
+
     //Path trace
-//    cout << "---" << endl;
     while (depth > 0 && !out.hit)
     {
         if (g_scene->trace(hitInfo, ray, 0, MIRO_TMAX))
@@ -266,8 +271,6 @@ float ApplyDeltaRange(const float delta, float value, const float x1, const floa
 		result += range;
 	else if ( result > x2)
 		result -= range;
-/*    if (delta > 1000 || delta < -1000)
-        cout << delta << endl; */
 
 	return result;
 }
@@ -369,19 +372,23 @@ void a3task3()
     cout << "Metropolis sampling" << endl;
     cout << Nsamples / (W*H) << " samples per pixel." << endl;
 
+#ifdef HACKER2
+    const char* version = "sphere";
+#elif defined (HACKER3)
+    const char* version = "red";
+#else
+    const char* version = "gray";
+#endif
 
     vector<vector<Vector3> > ptracing_results;
 
     {
         //Load image from task 1
         ifstream ptracing;
-#if defined (HACKER2)
-        ptracing.open("pathtracing_sphere.raw", ios::binary);
-#elif defined (HACKER3)
-        ptracing.open("pathtracing_red.raw", ios::binary);
-#else
-        ptracing.open("pathtracing_gray.raw");
-#endif
+        char filename[100];
+        sprintf(filename, "pathtracing_%s.raw\0", version);
+        ptracing.open(filename, ios::binary);
+
         int w_pt, h_pt;
         long double b_pt = 0;
         ptracing.read((char*)&w_pt, 4);
@@ -407,11 +414,16 @@ void a3task3()
 
     long double b = 0;
 
-
     path p_init;
     p_init.I = 0;
 
-    ofstream msq_out("metropolis_msq.dat");
+    ofstream msq_out;
+
+    {
+        char filename[100];
+        sprintf(filename, "metropolis_%s_msq.dat\0", version);
+        msq_out.open(filename);
+    }
 
     //Generate path seeds
     for (int i = 1; i <= Nseeds; i++)
@@ -499,7 +511,8 @@ void a3task3()
             if (writeImage)
             {
                 char filename[100];
-                sprintf(filename, "metropolis_%ld.ppm\0", i);
+
+                sprintf(filename, "metropolis_%s_%ld.ppm\0", version, i);
                 cout << "\nWriting " << filename << "..." << endl;
                 g_image->writePPM(filename);
             }
