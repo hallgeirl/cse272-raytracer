@@ -191,6 +191,7 @@ class Ray
             // Total internal reflection: all of the energy is reflected
             if (energy < 0)
             {
+//                std::cout << "int refl" << std::endl;
                 return reflect(hitInfo);
             }
 

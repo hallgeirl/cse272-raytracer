@@ -9,11 +9,12 @@ OBJS -=  parse.o lexer.o
 PDF=$(shell ls *.pdf 2>/dev/null)
 PNG=$(shell ls *.png 2>/dev/null)
 PLOTS=$(patsubst %.p,%.pdf,$(shell ls *.p 2> /dev/null))
-#PLOTS=$(patsubst %.p,%.png,$(shell ls *.p))
 
 CXXFLAGS += -DLINUX -g
 
 assignment3.o: assignment3.h
+
+$(OBJS):Miro.h
 
 # 
 # lexer.cpp: lexer.lex
@@ -46,7 +47,7 @@ freeimage:
 	mv lib/src/FreeImage/Dist/libfreeimage.a lib/lib/libfreeimage.a
 
 plots: $(PLOTS)
-	cp *.pdf report/a2/plots
+	cp *.pdf report/a3/plots
 	
 test: $(NAME)
 	./miro && eog *.ppm && rm *.ppm

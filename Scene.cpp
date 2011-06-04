@@ -94,11 +94,9 @@ Scene::preCalc()
 
 inline float tonemapValue(float value, float maxIntensity)
 {
-    value = min(max(value,0.f), 1.f);
-    return pow(value, 1./2.2);
-//    return value;
-//    return sigmoid(20*value-2.5);
-    //return std::min(pow(value / maxIntensity, 0.35f)*1.1f, 1.0f);
+//    value = min(max(value,0.f), 1.f);
+    //gamma correction
+    return min(max(pow(value, 1./2.2), 0.), 1.);;
 }
 
 void
@@ -140,10 +138,6 @@ Scene::raytraceImage(Camera *cam, Image *img)
 				{
 					shadeResult += tempShadeResult;
 				}
-
-				#ifdef STATS
-				Stats::Primary_Rays++;
-				#endif
 			}
 			shadeResult /= TRACE_SAMPLES; 
             tempImage[i*width+j] = shadeResult;
@@ -154,9 +148,6 @@ Scene::raytraceImage(Camera *cam, Image *img)
             else
                 tempImage[i*width+j] = m_bgColor;
 
-			#ifdef STATS
-			Stats::Primary_Rays++;
-			#endif
 			#endif // PATH_TRACING
             for (int k = 0; k < 3; k++)
             {
@@ -190,9 +181,6 @@ Scene::raytraceImage(Camera *cam, Image *img)
     img_raw.write((char*)&width, 4);
     img_raw.write((char*)&height, 4);
 
-    #ifdef OPENMP
-    #pragma omp parallel for
-    #endif
     for (int i = 0; i < height; ++i)
     {
         for (int j = 0; j < width; ++j)
@@ -223,11 +211,6 @@ Scene::raytraceImage(Camera *cam, Image *img)
     printf("Rendering Progress: 100.000%%\n");
     debug("Done raytracing!\n");
     printf("Time spent raytracing image: %lf seconds.\n", t1);
-
-#ifdef STATS
-	Stats tracerStats;
-	tracerStats.PrintStats();
-#endif
 }
 
 bool
@@ -309,7 +292,6 @@ bool Scene::traceScene(const Ray& ray, Vector3& shadeResult, int depth)
                 return true;
             }
 
-//            shadeResult = hitInfo.material->shade(ray, hitInfo, *this);
             double prob[3];
             prob[0] = hitInfo.material->getDiffuse().average();
             prob[1] = prob[0] + hitInfo.material->getReflection().average();
@@ -328,17 +310,19 @@ bool Scene::traceScene(const Ray& ray, Vector3& shadeResult, int depth)
 				Ray diffuseRay = ray.diffuse(hitInfo);
 
 				if (traceScene(diffuseRay, diffuseResult, depth))
-					shadeResult = (hitInfo.material->getDiffuse() * diffuseResult);
+					shadeResult = diffuseResult;
             }
             else if (rnd < prob[1])
             {
 				Vector3 reflectResult;
 				Ray reflectRay = ray.reflect(hitInfo);
 				if (traceScene(reflectRay, reflectResult, depth))
-					shadeResult = hitInfo.material->getReflection() * reflectResult;
+					shadeResult = reflectResult;
             }
             else if (rnd < prob[2])
             {
+                //Push the hit point inside the refractive object (or outside if on the way out)
+                hitInfo.P += ray.d*epsilon*2.;
 			    float Rs = ray.getReflectionCoefficient(hitInfo); //Coefficient from fresnel
 
 		        if (Rs > 0.01)
@@ -347,18 +331,17 @@ bool Scene::traceScene(const Ray& ray, Vector3& shadeResult, int depth)
 					Vector3 reflectResult;
 					Ray reflectRay = ray.reflect(hitInfo);
 		            if (traceScene(reflectRay, reflectResult, depth))
-				        shadeResult = hitInfo.material->getRefraction() * reflectResult * Rs;
+				        shadeResult = reflectResult * Rs;
 		        }
 			    
 				Vector3 refractResult;
 				Ray	refractRay = ray.refract(hitInfo);
 				if (traceScene(refractRay, refractResult, depth))
 				{
-					shadeResult = hitInfo.material->getRefraction() * refractResult * (1.f-Rs);
+					shadeResult = refractResult * (1.f-Rs);
 				}
             }
             
-
 #ifdef PHOTON_MAPPING
 				float pos[3] = {hitInfo.P.x, hitInfo.P.y, hitInfo.P.z};
 				float normal[3] = {hitInfo.N.x, hitInfo.N.y, hitInfo.N.z};
