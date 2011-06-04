@@ -1,4 +1,4 @@
-#include "assignment2.h"
+#include "assignment3.h"
 #include <fstream>
 #include <sstream>
 #include <iostream>
@@ -22,9 +22,18 @@ void BuildSquare(const Vector3& min, const Vector3& max, const Vector3& normal, 
 {
     TriangleMesh * square1 = new TriangleMesh;
     square1->createSingleTriangle();
-    square1->setV1(Vector3( min.x, min.y, min.z));
-    square1->setV2(Vector3( max.x, max.y, max.z));
-    square1->setV3(Vector3( max.x, max.y, min.z));
+    if (min.z != max.z)
+    {
+        square1->setV1(Vector3( min.x, min.y, min.z));
+        square1->setV2(Vector3( max.x, max.y, max.z));
+        square1->setV3(Vector3( max.x, max.y, min.z));
+    }
+    else
+    {
+        square1->setV1(Vector3( min.x, min.y, min.z));
+        square1->setV2(Vector3( max.x, max.y, max.z));
+        square1->setV3(Vector3( max.x, min.y, min.z));
+    }
     square1->setN1(normal);
     square1->setN2(normal);
     square1->setN3(normal);
@@ -32,14 +41,23 @@ void BuildSquare(const Vector3& min, const Vector3& max, const Vector3& normal, 
     Triangle* t = new Triangle;
     t->setIndex(0);
     t->setMesh(square1);
-    t->setMaterial(new Phong(Vector3(1), Vector3(0))); 
+    t->setMaterial(mat);
     g_scene->addObject(t);
 
 	TriangleMesh * square2 = new TriangleMesh;
     square2->createSingleTriangle();
-    square2->setV1(Vector3( min.x, min.y, min.z));
-    square2->setV2(Vector3( min.x, min.y, max.z));
-    square2->setV3(Vector3( max.x, max.y, max.z));
+    if (min.z != max.z)
+    {
+        square2->setV1(Vector3( min.x, min.y, min.z));
+        square2->setV2(Vector3( min.x, min.y, max.z));
+        square2->setV3(Vector3( max.x, max.y, max.z));
+    }
+    else
+    {
+        square2->setV1(Vector3( min.x, min.y, min.z));
+        square2->setV2(Vector3( min.x, max.y, max.z));
+        square2->setV3(Vector3( max.x, max.y, max.z));
+    }
     square2->setN1(normal);
     square2->setN2(normal);
     square2->setN3(normal);
@@ -54,15 +72,15 @@ void BuildSquare(const Vector3& min, const Vector3& max, const Vector3& normal, 
 void 
 makeTask3Scene()
 {
-    g_image->resize(512, 512);
+    g_image->resize(W, H);
 
     // set up the camera
     g_camera->setBGColor(Vector3(0.0f, 0.0f, 0.0f));
-    g_camera->setEye(Vector3(0, 0, -3));
+    g_camera->setEye(Vector3(0, 0, -2));
     g_camera->setLookAt(Vector3(0, 0, 0));
     g_camera->setUp(Vector3(0, 1, 0));
     g_camera->setFOV(90);
-    g_scene->setBgColor(Vector3(.5,.5,.5));
+    g_scene->setBgColor(Vector3(0));
 
     //real squarelight
     SquareLight *l = new SquareLight;
@@ -72,11 +90,12 @@ makeTask3Scene()
     l->setNormal(Vector3(0,-1,0));
     l->setUdir(Vector3(1,0,0));
     l->setWattage(1000);
-	l->setColor(Vector3(1.f));
+    l->setColor(Vector3(1.f));
 
     g_scene->addObject(l);
-	g_scene->addLight(l);    
-	
+	g_scene->addLight(l);
+    
+    double e = 0.0005;
 	// Floor
 	BuildSquare(Vector3(-1,-1,-1), Vector3(1,-1,1), Vector3(0,1,0), new Phong(Vector3(0.75)));
 	
@@ -84,56 +103,84 @@ makeTask3Scene()
 	BuildSquare(Vector3(-1,-1,1), Vector3(1,1,1), Vector3(0,0,-1), new Phong(Vector3(0.75)));
 
 	// Left Wall
-	//BuildSquare(Vector3(-1,-1,-1), Vector3(-1,1,1), Vector3(1,0,0), new Phong(Vector3(1), Vector3(0.75)));
-	BuildSquare(Vector3(-1,-1,-1), Vector3(-1,1,1), Vector3(1,0,0), new Phong(Vector3(0.75)));
-
+	BuildSquare(Vector3(-1-e,-1,-1), Vector3(-1,1,1), Vector3(1,0,0), new Phong(Vector3(0), Vector3(0.75)));
+#ifdef HACKER3
+    //Hackerpoint: Red wall
+	BuildSquare(Vector3(1+e,-1,-1), Vector3(1,1,1), Vector3(-1,0,0), new Phong(Vector3(0.75,0,0)));
+#else
 	// Right Wall
-	BuildSquare(Vector3(1,-1,-1), Vector3(1,1,1), Vector3(-1,0,0), new Phong(Vector3(0.75)));
-
+	BuildSquare(Vector3(1+e,-1,-1), Vector3(1,1,1), Vector3(-1,0,0), new Phong(Vector3(0.75)));
+#endif
 	// Ceiling
 	BuildSquare(Vector3(0.05,1,-1), Vector3(1,1,1), Vector3(0,-1,0), new Phong(0.75));
 	BuildSquare(Vector3(-0.95,1,-1), Vector3(0,1,1), Vector3(0,-1,0), new Phong(0.75));
 
+    //Hackerpoint: Sphere
+#ifdef HACKER2
+    Sphere* sp = new Sphere();
+    sp->setCenter(Vector3(0,0,0));
+    sp->setRadius(0.5);
+    sp->setMaterial(new Phong(Vector3(0), Vector3(0), Vector3(1), 1, 1.5));
+    g_scene->addObject(sp);
+#endif
+    
     g_scene->preCalc();
 }
 
-sample samplePath(const Vector3& origin, const Vector3& direction)
+sample samplePath(const path& p, int w, int h)
 {
     sample out;
-    out.direct = true;
-    HitInfo hitInfo(0, origin + Vector3(0,epsilon,0), Vector3(0,1,0));
+    Ray ray = g_camera->eyeRay((int)(p.u[0]*(double)W), (int)(p.u[1]*(double)H), W, H, false);
 
-    Ray ray(origin+Vector3(0,epsilon,0), direction); 
+    int depth = PATH_LENGTH;
+
+    int pathpos = 2; //next random number to be used is at index 2
+
+    HitInfo hitInfo;
+    PointLight* l;
+    Vector3 contribution(1./PI,1./PI,1./PI); //Current contribution (decreases if surface we hit has reflectance < 1)
 
     //Path trace
-    out.nrays++;
-    while (true)
+//    cout << "---" << endl;
+    while (depth > 0 && !out.hit)
     {
         if (g_scene->trace(hitInfo, ray, 0, MIRO_TMAX))
         {
-            //hit diffuse surface->we're done
-            if (!hitInfo.material->isReflective())
+            //Did we hit the light?
+            l = dynamic_cast<PointLight*>(hitInfo.object);
+            if (l != NULL)
             {
-                double contrib = hitInfo.material->shade(ray, hitInfo, *g_scene)[0];
-                out.value = contrib; //=25/PI=radiance
-                out.costheta = dot(hitInfo.N, ray.d);
-                out.dist2 = hitInfo.P.length2(); //x'-x = x'
+                out.value = contribution*l->radiance(hitInfo.P, ray.d);
                 out.hit = true;
-
-                break;
             }
             //hit reflective surface => reflect and trace again
-            else 
+            else if (hitInfo.material->isReflective())
             {
                 ray = ray.reflect(hitInfo);
-                out.direct = false;
-                out.nrays++;
+                contribution = contribution * hitInfo.material->getReflection();
             }
+            //Hit a refractive surface?
+            else if (hitInfo.material->isRefractive())
+            {
+                //Push the hit point inside (or outside if on the way out) the refractive object
+                hitInfo.P += ray.d*epsilon*2.;
+                ray = ray.refract(hitInfo);
+                contribution = contribution * hitInfo.material->getRefraction();
+            }
+            //Did we hit a diffuse object?
+            else
+            {
+                contribution = contribution * hitInfo.material->getDiffuse();
+                ray = ray.diffuse(hitInfo, p.u[pathpos], p.u[pathpos+1]);
+                pathpos += 2;
+            }
+            depth--;
         }
         //Missed the scene
         else 
         {
             out.hit = false;
+            out.value = Vector3(0);
             break;
         }
     }
@@ -202,7 +249,28 @@ void a3task1()
     }
 }
 
+float MutatePath(const float MutationSize)
+{
+	return ((2 * frand() - 1) > 0 ? 1 : -1) * pow(frand(), 1.f/MutationSize+1);
+}
 
+float ApplyDeltaRange(const float delta, float value, const float x1, const float x2)
+{
+	float range = x2 - x1;
+    float delta_ = delta;
+    /*if (delta < -range) delta_ = -range;
+    if (delta > range) delta_ = range;*/
+    float result = value + delta_;
+    
+	if (result < x1)
+		result += range;
+	else if ( result > x2)
+		result -= range;
+/*    if (delta > 1000 || delta < -1000)
+        cout << delta << endl; */
+
+	return result;
+}
 
 void a3task2()
 {
@@ -252,235 +320,240 @@ double mutate_value(double s1, double s2)
 void mutate_path(const path &p0, path &p1)
 {
     //Mutation magnitudes
-    double dpos = 1, dtheta = .125, dphi = .125;
+//    double dpos = 1, dtheta = .125, dphi = .125;
+    double dpos = 1, dtheta = .5, dphi = .5;
     double max_mutation = 1./64.;
-    double min_mutation = 1./2048.;
+    double min_mutation = 1./1024.;
 
     if (frand() < p_large)
     {
-        p1.u[0] = 2.*frand() - 1.;
-        p1.u[1] = 2.*frand()*PI;
-        p1.u[2] = asin(sqrt(frand()));
+        p1.init_random();
     }
     else
     {
-        bool mutated = false;
-        while (!mutated)
+        //Mutate position
+        p1.u[0] = p0.u[0] + mutate_value(min_mutation, max_mutation) * dpos;
+        if (p1.u[0] >= 1.) p1.u[0] -= 1;
+        else if (p1.u[0] < 0) p1.u[0] += 1;
+
+        p1.u[1] = p0.u[1] + mutate_value(min_mutation, max_mutation) * dpos;
+        if (p1.u[1] > 1) p1.u[1] -= 1;
+        else if (p1.u[1] < 0) p1.u[1] += 1;
+
+        //Mutate directions
+        for (int i = 0; i < PATH_LENGTH; i++)
         {
-            if (frand() < p_pos)
-            {
-                p1.u[0] = p0.u[0] + mutate_value(min_mutation, max_mutation) * dpos;
-                if (p1.u[0] > 1) p1.u[0] -= 2;
-                else if (p1.u[0] < -1) p1.u[0] += 2;
-                mutated = true;
-            }
-            else
-            {
-                p1.u[0] = p0.u[0];
-            }
+            int j = 2+i*2;
+            p1.u[j] = p0.u[j] + mutate_value(min_mutation, max_mutation)*dtheta;
+            if (p1.u[j] < 0) p1.u[j] += 1;
+            else if (p1.u[j] > 1) p1.u[j] -= 1;
 
-            if (frand() < p_angle)
-            {
-                p1.u[1] = p0.u[1] + mutate_value(min_mutation, max_mutation)*dtheta;
-                if (p1.u[1] < 0) p1.u[1] += 2.*PI;
-                else if (p1.u[1] > 2.*PI) p1.u[1] -= 2.*PI;
-
-                p1.u[2] = p0.u[2] + mutate_value(min_mutation, max_mutation)*dphi;
-                if (p1.u[2] > PI/2.) p1.u[2] -= PI/2.;
-                else if (p1.u[2] < 0) p1.u[2] += PI/2.;
-                mutated = true;
-            }
-            else
-            {
-                p1.u[1] = p0.u[1];
-                p1.u[2] = p0.u[2];
-            }
+            p1.u[j+1] = p0.u[j+1] + mutate_value(min_mutation, max_mutation)*dtheta;
+            if (p1.u[j+1] < 0) p1.u[j+1] += 1;
+            else if (p1.u[j+1] > 1) p1.u[j+1] -= 1;
         }
+
     }
 }
 
 void a3task3()
 {
+    const int Nseeds = 1000000;
+    const long Nsamples = 100000000;
+    //Record the error after every this many samples
+    const int error_interval = 100000;
+
+    Vector3 img[W][H];
+    memset(img, 0, W*H*sizeof(Vector3));
+
     cout << "Metropolis sampling" << endl;
-	HitInfo hitInfo(0, Vector3(0, epsilon, 0), Vector3(0,1,0));
-	Vector3 shadeResult(0);
+    cout << Nsamples / (W*H) << " samples per pixel." << endl;
 
-    long double ptracing_output[100];
-    double ptracing_b = 0;
 
-    //Get path tracing results from last iteration
+    vector<vector<Vector3> > ptracing_results;
+
     {
-        cout << "Loading path tracing results..." << endl;
-        char tmpbuf[100000];
-        ifstream fp_tmp("pathtracing_irrad.dat");
-        if (!fp_tmp.is_open())
-            memset(ptracing_output,0,sizeof(long double)*100);
-        else
+        //Load image from task 1
+        ifstream ptracing;
+#if defined (HACKER2)
+        ptracing.open("pathtracing_sphere.raw", ios::binary);
+#elif defined (HACKER3)
+        ptracing.open("pathtracing_red.raw", ios::binary);
+#else
+        ptracing.open("pathtracing_gray.raw");
+#endif
+        int w_pt, h_pt;
+        long double b_pt = 0;
+        ptracing.read((char*)&w_pt, 4);
+        ptracing.read((char*)&h_pt, 4);
+        cout << "Loading path tracing results [width=" << w_pt << ", height " << h_pt << "]" << endl;
+        for (int i = 0; i < h_pt; i++)
         {
-            int i = 0;
-
-            while (!fp_tmp.getline(tmpbuf,100000).eof())
+            ptracing_results.push_back(vector<Vector3>());
+            for (int j = 0; j < w_pt; j++)
             {
-                stringstream ss(tmpbuf);
-                while (ss >> ptracing_output[i]) {}
-                ptracing_b += (double)ptracing_output[i];
-                i++;
+                Vector3 pix(0);
+                ptracing.read((char*)&pix.x, sizeof(float));
+                ptracing.read((char*)&pix.y, sizeof(float));
+                ptracing.read((char*)&pix.z, sizeof(float));
+                b_pt += pix.average();
+                ptracing_results[i].push_back(pix);
             }
-            fp_tmp.close();
         }
-        ptracing_b /= 100;
+        b_pt /= (long double)(w_pt*h_pt);
+        cout << "Done reading path tracing results. b = " << b_pt << endl;
     }
-
-	ofstream fp_err("metropolis_msq.dat");
-    const int N = 100; //Number of points
-    const int Nseeds = 10000000;
-    const int Nsamples = 1000000000;
-
-    //Output irradiances for each point
-    //There's N points distributed uniformly over the interval
-    long double outputs[N];
-    long double error[N];
-
-    stringstream output_strings[N];
-    stringstream error_strings[N];
-
-    memset(outputs, 0, sizeof(long double)*N);
-    memset(error, 0, sizeof(long double)*N);
-
-    Vector3 surfaceNormal(0,1,0);
-
     cout << "Generating path seeds..." << endl;
 
-    path p0;
-    p0.I = 0;
     long double b = 0;
 
+
+    path p_init;
+    p_init.I = 0;
+
+    ofstream msq_out("metropolis_msq.dat");
+
     //Generate path seeds
-    for (int i = 0; i < Nseeds; i++)
+    for (int i = 1; i <= Nseeds; i++)
     {
-        double u_tmp[3];
-        //Position
-        u_tmp[0] = 2.*frand() - 1;
+        path p_tmp;
 
-        //Direction
-        u_tmp[1] = 2.*PI*frand();       //Theta (rotation)
-        u_tmp[2] = asin(sqrt(frand())); //Phi (pitch)
-        Vector3 dir = alignHemisphereToVector(surfaceNormal, u_tmp[1], u_tmp[2]);
+        p_tmp.init_random();
 
-        sample s = samplePath(Vector3(u_tmp[0], 0, 0), dir);
-    
-        if (s.hit && s.value > 0)
+        sample s = samplePath(p_tmp, W, H);
+
+        if (s.hit)
         {
-            b += s.value*PI;
-            if (p0.I < s.value)
-            {
-                p0.I = s.value;
-                memcpy(p0.u, u_tmp, 3*sizeof(double));
-            }
+            long double I = s.value.average();
+            b += I*PI;
+
+            //is it a better path?
+            if (p_init.I < I)
+                path_copy(p_init, p_tmp);
         }
     }
 
     b /= Nseeds;
 
-    cout << "b=" << b << ", b_ptracing=" << ptracing_b << ", error=" << b/ptracing_b << endl;
-    cout << "p0=" << p0.I << "; [" << p0.u[0] << ", " << p0.u[1] << ", " << p0.u[2] << "]" << endl;
+    cout << "b=" << b << endl;
 
-    for (int i = 1; i <= Nsamples; i++)
+    double b_result = 0;
+    double msq = 0;
+    //Initialize msq
+    for (int y = 0; y < H; y++)
     {
+        for (int x = 0; x < W; x++)
+        {
+            double res = ptracing_results[y][x].average();
+            msq += res*res;
+        }
+    }
+    msq /= (double)(H*W);
+
+
+    path p0;
+    p0.I = 0;
+    path_copy(p0, p_init);
+
+    memset(img, 0, W*H*sizeof(Vector3));
+
+    for (long i = 1; i <= Nsamples; i++)
+    {
+        if (i % (Nsamples/1000) == 0)
+        {
+            printf("\rProgress: %f%% MSQ: %lf", (float)(100.*(double)i/(double)Nsamples), msq);
+            fflush(stdout);
+        }
+
+        //Compute error vs. reference
+        if (i % error_interval == 0)
+        {
+            msq = 0;
+            bool writeImage = false;
+            if (i == 100000 || i == 1000000 || i == 10000000 || i == 100000000)
+                writeImage = true;
+
+            for (int y = 0; y < H; y++)
+            {
+                for (int x = 0; x < W; x++)
+                {
+                    //Compute pixel value
+                    Vector3 result = img[x][y]*b*(double)W*(double)H/(double)i;
+                    msq += pow((ptracing_results[y][x] - result).average(), 2);
+
+                    if (writeImage)
+                    {
+                        //Gamma correct
+                        for (int i = 0; i < 3; i++)
+                        {
+                            result[i] = pow(result[i], 1.f/2.2f);
+                        }
+                        g_image->setPixel(x,y,result);
+                    }
+                }
+            }
+
+            msq /= (double)(W*H);
+            msq_out << msq << endl;
+
+            if (writeImage)
+            {
+                char filename[100];
+                sprintf(filename, "metropolis_%ld.ppm\0", i);
+                cout << "\nWriting " << filename << "..." << endl;
+                g_image->writePPM(filename);
+            }
+        }
+
         //Mutate path. 
         path p1;
         mutate_path(p0, p1);
 
-        sample s = samplePath(Vector3(p1.u[0],0,0), alignHemisphereToVector(surfaceNormal, p1.u[1], p1.u[2]));
-        
-        if (!s.hit) s.value = 0;
-        p1.I = s.value;
-        
+        sample s = samplePath(p1, W, H);
+
+        p1.I = s.value.average();
+        p1.F = s.value;
+
         double accept;
-        int x1 = (int)(((p1.u[0]+1.)/2.)*N);
-        int x0 = (int)(((p0.u[0]+1.)/2.)*N);
-        if (x0 == N) x0--;
-        if (x1 == N) x1--;
 
-        if (p1.u[0] >= -1 && p1.u[0] <= 1 && p1.u[2] >= 0 && p1.u[2] <= PI/2.)
-        {
-            accept = std::min(p1.I / p0.I, 1.);
-            outputs[x1] += accept*b;
-        }
-        else
-        {
-            accept = 0;
-        }
+        int x0 = (int)(p0.u[0]*(double)W), y0 = (int)(p0.u[1]*(double)H);
+        int x1 = (int)(p1.u[0]*(double)W), y1 = (int)(p1.u[1]*(double)H);
+        if (x0 == W) x0--;
+        if (y0 == H) y0--;
+        if (x1 == W) x1--;
+        if (y1 == H) y1--;
 
-        outputs[x0] += (1.-accept)*b;
+        //Add contribution to pixels
+        accept = std::min(p1.I / p0.I, 1.);
+        if (p0.I > 0)
+            img[x0][y0] += (1.-accept)*(p0.F / p0.I);
+        if (p1.I > 0)
+            img[x1][y1] += accept * (p1.F / p1.I);
 
         if (frand() < accept)
         {
             path_copy(p0, p1);
         }
 
-        double msq = 0;
-        if (i % 1000 == 0)
-        {
-
-            for (int j = 0; j < N; j++)
-            {
-                output_strings[j] << outputs[j]/(i+1)*(long double)N << " ";//(j==N-1?"":"\t");
-                long double err = (outputs[j]/(i+1)*(long double)N-ptracing_output[j]);
-                long double err_sq = err*err;
-                error[j] = err;
-
-                msq += err_sq;
-            }
-            msq /= N;
-
-            fp_err << i << " " << msq << "\n";
-        }
-
-        if (i % 10000 == 0)
-        {
-            printf("Iteration %d\n", i);
-            cout << "Error: " << endl;
-
-            for (int j = 0; j < N; j++)
-            {
-                long double err = error[j];
-                long double err_sq = err*err;
-                if (i % 10000 == 0)
-                {
-                     printf("%6.3Lf%s", err, j==N-1?"":"\t");
-                }
-            }
-
-            cout << "\nMean square error: " << msq << "\n";
-            cout << "Error in b: " << b - ptracing_b << endl;
-        }
-
-        if (i == 1000000 || i == 100000000)
-        {
-            stringstream ss;
-            ss << "metropolis_error_" << i << ".dat";
-            
-            ofstream f_errorgraph(ss.str().c_str());
-            for (int j = 0; j < N; j++)
-            {
-                f_errorgraph << j+1 << " " << error[j] << "\n";
-            }
-        }
     }
 
+    printf("\n");
+    for (int x = 0; x < W; x++)
     {
-        ofstream fp("metropolis_irrad.dat");
-        for (int i = 0; i < N; i++)
+        for (int y = 0; y < H; y++)
         {
-            fp << output_strings[i].str() << "\n";
+            //Compute pixel value
+            Vector3 result = img[x][y]*b*(double)W*(double)H/(double)Nsamples;
+            b_result += result.average();
+
+            //Gamma correct
+            for (int i = 0; i < 3; i++)
+            {
+                result[i] = pow(result[i], 1.f/2.2f);
+            }
+            g_image->setPixel(x,y,result);
         }
-        fp.close();
     }
 
-    {
-        ofstream fp("metropolis_b.dat");
-        fp << "b=" << b << ", error (vs. pathtracing)=" << b-ptracing_b << "\n";
-        fp.close();
-    }
+    cout << "Resulting b: " << b_result/(double)W/(double)H << endl;
 }

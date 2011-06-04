@@ -1,6 +1,11 @@
+#include "Camera.h"
+#include "Image.h"
+#include "Scene.h"
+#include "SquareLight.h"
+#include "TriangleMesh.h"
+#include "Miro.h"
 
-
-/*void
+void
 makeCornellScene()
 {
     g_image->resize(512, 512);
@@ -15,17 +20,16 @@ makeCornellScene()
     // create and place a point light source
     SquareLight* light = new SquareLight;
     light->setPosition(Vector3(2.5, 4.9, -1));
-    light->setDimensions(1, 1);
+    light->setDimensions(4, 4);
     light->setWattage(40);
     light->setColor(Vector3(1, 1, 1));
     light->setUdir(Vector3(1,0,1));
     g_scene->addLight(light);
     g_scene->addObject(light);
 
-    Material* material = new Phong(Vector3(1.0f));
     TriangleMesh * mesh = new TriangleMesh;
     mesh->load("models/cornell_box_1.obj");
-	addMeshTrianglesToScene(mesh, new Phong(Vector3(1,1,1)));
+	addMeshTrianglesToScene(mesh, new Phong(Vector3(0.75)));
 
     mesh = new TriangleMesh;
     mesh->load("models/cornell_box_2.obj");
@@ -37,12 +41,12 @@ makeCornellScene()
     
     mesh = new TriangleMesh;
     mesh->load("models/cornell_box_4.obj");
-    addMeshTrianglesToScene(mesh, new Phong(Vector3(1)));
+    addMeshTrianglesToScene(mesh, new Phong(Vector3(0.75)));
 
     // let objects do pre-calculations if needed
     g_scene->preCalc();
 }
-
+/*
 void
 makeTestScene()
 {

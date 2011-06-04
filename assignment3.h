@@ -3,6 +3,7 @@
 #include <map>
 #include <cstring>
 #include "Material.h"
+#include "Utility.h"
 
 void makeTask3Scene();
 void a3task1();
@@ -10,14 +11,15 @@ void a3task2();
 void a3task3();
 void BuildSquare(const Vector3& min, const Vector3& max, const Vector3& normal, const Material* mat);
 
+#define W 512
+#define H 512
+
 struct sample
 {
-    double value, dist2, costheta;
+    Vector3 value;
     bool hit;
-    bool direct;
-    int nrays;
     sample() 
-		:nrays(0), hit(false)
+		:hit(false), value(0)
 	{} 
 };
 
@@ -28,15 +30,37 @@ struct samples
     sample_map X;
     double p;
     long n;
-    bool isAreaSample;
 
     samples() { n = 0; }
 };
 
-struct path
+//Number of random directions
+#define PATH_LENGTH 8
+
+class path
 {
-    double u[3]; //position, theta, phi
+public:
+    path() : F(0) { I = 0; }
+    double u[PATH_LENGTH*2+2]; //position, [theta, phi]*8
     double I;
+    Vector3 F;
+
+    void init_random()
+    {
+        for (int i = 0; i < PATH_LENGTH*2+2; i++)
+        {
+            u[i] = frand();
+        }
+    }
+    void print()
+    {
+        printf("Path: I=%lf, u=[", I);
+        for (int i = 0; i < 2+PATH_LENGTH*2; i++)
+        {
+            printf("%s%lf", (i == 0 ?"" : ", "), u[i]);
+        }
+        printf("]\n");
+    }
 }; 
 
 inline void path_copy(path& to, path& from)
@@ -44,7 +68,5 @@ inline void path_copy(path& to, path& from)
     memcpy(&to, &from, sizeof(path));
 }
 
-static const double p_large = 0.6;
-static const double p_pos = 1;
-static const double p_angle = 1;
+static const double p_large = 0.005;
 #endif

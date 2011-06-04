@@ -15,7 +15,7 @@ ifndef nogfx
 endif
 LDFLAGS		= $(LIBDIRS) $(LIBS) -fopenmp
 CXXFLAGS          += -DNO_GFX $(INCDIRS) -O3 -DOPENMP -fomit-frame-pointer -fopenmp -lopenmp -g \
--Wno-deprecated -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_GNU_SOURCE
+-Wno-deprecated -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -D_GNU_SOURCE #-DMETROPOLIS
 # -msse4.1
 
 .SUFFIXES: .cpp .h .d .o .p .pdf .png

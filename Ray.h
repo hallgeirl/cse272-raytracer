@@ -25,7 +25,7 @@ class HitInfo
         Vector3 P;                          //!< The hit point
         Vector3 N;                          //!< Shading normal vector
         const Material* material;           //!< Material of the intersected object
-        const Object  * object;             //!< Material of the intersected object
+        Object  * object;             //!< Material of the intersected object
 
         //! Default constructor.
         explicit HitInfo(float t = 0.0f,
@@ -63,9 +63,6 @@ class Ray
     Ray() : o(), d(Vector3(0.0f,0.0f,1.0f))
     {
         isDiffuse = false;
-#ifdef STATS
-        Stats::Rays++;
-#endif
 
 #ifdef __SSE4_1__
         setupSSE();
@@ -75,9 +72,6 @@ class Ray
     Ray(const Vector3& o, const Vector3& d) : o(o), d(d)
     {
         isDiffuse = false;
-#ifdef STATS
-        Stats::Rays++;
-#endif
 #ifdef __SSE4_1__
         setupSSE();
 #endif
@@ -88,29 +82,24 @@ class Ray
         {
             Vector3 dir = alignHemisphereToVector(v, theta, phi);
 
-            return Ray(origin + epsilon*dir, dir);
+            return Ray(origin, dir);
+        }
 
-            //convert spherical coords to cartesian coords
-           /* float u1 = sin(phi) * cos(theta);
-            float u2 = sin(phi) * sin(theta);
-            float u3 = cos(phi);
+        //Diffuse ray with predetermined random numbers
+        Ray diffuse(const HitInfo & hitInfo, float u1, float u2) const
+        {
+            //bias to the surface normal
+            float phi = asin(sqrt(u1));
+            float theta = 2.0f * PI * u2;
 
-            //determine one surface tangent from cross of v and one of the unit vectors 
-            Vector3 t1 = cross(Vector3(0,0,1), v);
-            if (t1.length2() < 1e-6) t1 = cross(Vector3(0, 1, 0), v);
+            Ray random = alignToVector(hitInfo.N, hitInfo.P, theta, phi);
+            random.isDiffuse = true;
 
-            //Aligned direction determined by combination of cartesian coordiantes along tangents
-            Vector3 aligned_d(u1*t1 + u2*cross(t1, v) + u3*v);
-
-            aligned_d.normalize();
-            return Ray(origin + aligned_d * epsilon, aligned_d);*/
+            return random;
         }
 
         Ray diffuse(const HitInfo & hitInfo) const
         {
-#ifdef STATS
-            Stats::Secondary_Rays++;
-#endif
             //bias to the surface normal
             float phi = asin(sqrt(frand()));
             float theta = 2.0f * PI * frand();
@@ -118,34 +107,29 @@ class Ray
             Ray random = alignToVector(hitInfo.N, hitInfo.P, theta, phi);
             random.isDiffuse = true;
 
-            random.o += random.d*epsilon;
-
             return random;
         }
 
         //Shoots a reflection ray. If path tracing is enabled, shoot a random ray according to the glossyness of the material.
         Ray reflect(const HitInfo & hitInfo) const
         {
-#ifdef STATS
-            Stats::Secondary_Rays++;
-#endif
 
-#ifdef PATH_TRACING
-            //Generate randomized reflection ray based on glossyness
-            //bias to the perfectly reflected ray
-            float phi = acos(pow(frand(), 1.0f/(1.0f+hitInfo.material->getShininess())));
-            float theta = 2.0f * PI * frand();
-
-            //Direction of perfect reflection
-            Vector3 d_reflect = d - 2 * dot(hitInfo.N, d) * hitInfo.N;
-
-            return alignToVector(d_reflect, hitInfo.P, theta, phi);
-#else
+//#ifdef PATH_TRACING
+//            //Generate randomized reflection ray based on glossyness
+//            //bias to the perfectly reflected ray
+//            float phi = acos(pow(frand(), 1.0f/(1.0f+hitInfo.material->getShininess())));
+//            float theta = 2.0f * PI * frand();
+//
+//            //Direction of perfect reflection
+//            Vector3 d_reflect = d - 2 * dot(hitInfo.N, d) * hitInfo.N;
+//
+//            return alignToVector(d_reflect, hitInfo.P, theta, phi);
+//#else
             Vector3 d_r = d - 2 * dot(hitInfo.N, d) * hitInfo.N;
 			d_r.normalize();
-            Ray reflect(hitInfo.P + d_r * epsilon, d_r);
+            Ray reflect(hitInfo.P, d_r);
             return reflect;
-#endif
+//#endif
         }
 
         //Reflection coefficient from the Fresnel equations
@@ -179,7 +163,7 @@ class Ray
 
             //The equation is (n1*cos(th) - n2 * sqrt(1-((n1/n2)*sin(th))^2)) / (n1*cos(th) + n2 * sqrt(1-((n1/n2)*sin(th))^2))
             float res = std::pow((n1*cosTheta - sqrtSinTheta)/(n1*cosTheta + sqrtSinTheta), 2.f);
-            //if (res != res || res < 0 || res > 1) std::cout << res << std::endl;
+
             return res;
         }
 
@@ -207,23 +191,20 @@ class Ray
             // Total internal reflection: all of the energy is reflected
             if (energy < 0)
             {
+//                std::cout << "int refl" << std::endl;
                 return reflect(hitInfo);
             }
 
-#ifdef STATS
-            Stats::Secondary_Rays++;
-#endif
-
             Vector3 d_r = n1 * (d - n * dot(d, n)) / n2 - n * sqrt(energy);
 
-            #ifdef PATH_TRACING
-            float phi = acos(pow(frand(), 1.0f/(1.0f+hitInfo.material->getShininess())));
-            float theta = 2.0f * PI * frand();
-
-            return alignToVector(d_r, hitInfo.P, theta, phi);
-            #else
-            return Ray(hitInfo.P + d_r * epsilon, d_r);
-            #endif
+//            #ifdef PATH_TRACING
+//            float phi = acos(pow(frand(), 1.0f/(1.0f+hitInfo.material->getShininess())));
+//            float theta = 2.0f * PI * frand();
+//
+//            return alignToVector(d_r, hitInfo.P, theta, phi);
+//            #else
+            return Ray(hitInfo.P, d_r);
+//            #endif
         }
 
 };
