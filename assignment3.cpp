@@ -102,6 +102,7 @@ makeTask3Scene()
 	// Back Wall
 	BuildSquare(Vector3(-1,-1,1), Vector3(1,1,1), Vector3(0,0,-1), new Phong(Vector3(0.75)));
 
+
 	// Left Wall
 	BuildSquare(Vector3(-1-e,-1,-1), Vector3(-1,1,1), Vector3(1,0,0), new Phong(Vector3(0), Vector3(0.75)));
 #ifdef HACKER3
@@ -124,6 +125,19 @@ makeTask3Scene()
     g_scene->addObject(sp);
 #endif
     
+    //DEBUG
+    SquareLight *l2 = new SquareLight;
+    l2->setDimensions(0.5,0.5);
+    l2->setPosition(Vector3(0,0,0));
+    Vector3 n(-1,-1,0);
+    n.normalize();
+    l2->setNormal(n);
+    l2->setUdir(Vector3(-1,1,0));
+    l2->setWattage(100);
+    l2->setColor(Vector3(1.f));
+    g_scene->addObject(l2);
+	g_scene->addLight(l2);
+
     g_scene->preCalc();
 }
 
@@ -192,92 +206,8 @@ sample samplePath(const path& p, int w, int h)
     return out;
 }
 
-sample samplePath(const Vector3& origin)
-{
-    HitInfo hitInfo(0, origin + Vector3(0,epsilon,0), Vector3(0,1,0));
-
-    //Path trace
-    Ray ray = ray.diffuse(hitInfo);
-    return samplePath(origin, ray.d);
-}
-
-
-void a3task1()
-{
-    cout << "Path tracing" << endl;
-	HitInfo hitInfo(0, Vector3(0, epsilon, 0), Vector3(0,1,0));
-	Vector3 shadeResult(0);
-
-	ofstream fp("pathtracing_irrad.dat");
-    int N = 100;
-
-    map<double, string> outputs;
-
-    #pragma omp parallel for schedule(static,1)
-    for (int i = 0; i < N; i++)
-    {
-        stringstream output;
-
-        long double res = 0.;
-        long nrays = 0;
-        Vector3 origin(2.*(float)i/((float)N-1.)-1., 0, 0);
-        #pragma omp critical
-        {
-            cout << "Sampling at " << origin  << endl;
-        }
-        long k;
-        for (k = 1; k <= 100000000; ++k)
-        {
-            sample s = samplePath(origin);
-            if (s.hit)
-                res += s.value;
-            nrays += s.nrays;
-
-            //Division by 1/PI (or multiplying by PI) is neccesary because
-            //E(f/p)=F=1/n*sum(f/p) and p=1/PI (distribution of rays)
-            if (k % 1000 == 0)
-            {
-                output << (k > 0 ? "\t" : "") << PI*(double)(res/((long double)k+1.));
-                if (k % 100000 == 0 && k > 0)
-                    cout << k+1 << "\t" << origin.x << "\t" << PI*(double)(res/((long double)k+1.)) << "\n";
-            }
-        }
-        outputs[origin.x] = output.str();
-    }
-
-    map<double, string>::iterator it = outputs.begin();
-
-    while (it != outputs.end())
-    {
-        fp << it->second << endl;
-        it++;
-    }
-}
-
-float MutatePath(const float MutationSize)
-{
-	return ((2 * frand() - 1) > 0 ? 1 : -1) * pow(frand(), 1.f/MutationSize+1);
-}
-
-float ApplyDeltaRange(const float delta, float value, const float x1, const float x2)
-{
-	float range = x2 - x1;
-    float delta_ = delta;
-    /*if (delta < -range) delta_ = -range;
-    if (delta > range) delta_ = range;*/
-    float result = value + delta_;
-    
-	if (result < x1)
-		result += range;
-	else if ( result > x2)
-		result -= range;
-
-	return result;
-}
-
 void a3task2()
 {
-
     /*long double ptracing_output[100];
     ofstream msq_fp("adaptiveppm_msq.dat");
 
@@ -301,8 +231,6 @@ void a3task2()
             fp_tmp.close();
         }
     }
-
-	
 
     ofstream fp("adaptiveppm_irrad.dat");
     for (int i = 0; i < N; i++)
