@@ -342,9 +342,9 @@ bool Scene::UpdateMeasurementPoints(const Vector3& pos, const Vector3& power)
 {
 	bool hit = false;
 
-	for (int n = 0; n <  m_hitpoints->size(); ++n)
+	for (int n = 0; n <  m_hitpoints.size(); ++n)
 	{
-		HitPoint *hp = (*g_scene->hitpoints())[n];
+		HitPoint *hp = m_hitpoints[n];
 
 		// skip the measurement points that did not hit a surface
 		if (!hp->bHit)
@@ -370,9 +370,9 @@ bool Scene::UpdateMeasurementPoints(const Vector3& pos, const Vector3& power)
 void Scene::UpdatePhotonStats()
 {
     cout << "Alphas:" << endl;
-	for (int n = 0; n < g_scene->hitpoints()->size(); ++n)
+	for (int n = 0; n < m_hitpoints.size(); ++n)
 	{
-		HitPoint *hp = (*g_scene->hitpoints())[n];
+		HitPoint *hp = m_hitpoints[n];
 		if (!hp->bHit)
 			continue;
 
@@ -387,7 +387,7 @@ void Scene::UpdatePhotonStats()
 
         CircleSegment(Vector3(-1,0,-1), Vector3(0,0,1), hp->radius, hp->position, A1); 
         CircleSegment(Vector3(1,0,-1), Vector3(0,0,1), hp->radius, hp->position, A1);
-        (*g_scene->hitpoints())[n]->scaling = A1/A;
+        m_hitpoints[n]->scaling = A1/A;
 		
 		// only adding a ratio of the newly added photons
 		float delta = (hp->accPhotons + alpha * hp->newPhotons)/(hp->accPhotons + hp->newPhotons);
@@ -407,9 +407,9 @@ void Scene::UpdatePhotonStats()
 //void PrintPhotonStats(ofstream& fp, const float photonsEmitted, const float m_photonsUniform)
 void Scene::PrintPhotonStats()
 {
-	for (int n = 0; n <  g_scene->hitpoints()->size(); ++n)
+	for (int n = 0; n <  m_hitpoints.size(); ++n)
 	{
-		HitPoint *hp = (*g_scene->hitpoints())[n];
+		HitPoint *hp = m_hitpoints[n];
 
 		long double A = PI * pow(hp->radius, 2);
 
@@ -422,9 +422,9 @@ void Scene::RenderPhotonStats(Vector3 *tempImage, const int width, const int hei
 	float localMaxIntensity = -infinity, localMinIntensity = infinity;
 
 	int n;
-	for (n = 0; n <  g_scene->hitpoints()->size(); ++n)
+	for (n = 0; n <  m_hitpoints.size(); ++n)
 	{
-		HitPoint *hp = (*g_scene->hitpoints())[n];
+		HitPoint *hp = m_hitpoints[n];
 
 		if (!hp->bHit)
 		{

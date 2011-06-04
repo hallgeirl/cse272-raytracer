@@ -45,7 +45,7 @@ main(int argc, char*argv[])
 #ifdef LINUX
     srand48(time(0));
 #endif
-    srand(time(0));
+//    srand(time(0));
 //mode = 0: Create opengl window and everything
 //mode = 1: Render scenes without any GUI
 //mode = 2: Other things
