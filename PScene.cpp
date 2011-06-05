@@ -327,7 +327,7 @@ bool Scene::traceScene(const Ray& ray, Vector3& shadeResult, int depth)
     return hit;
 }
 
-float MutatePath(const float MutationSize)
+float Mutate(const float MutationSize)
 {
 	return ((2 * frand() - 1) > 0 ? 1 : -1) * pow(frand(), 1.f/MutationSize+1);
 }
@@ -348,6 +348,31 @@ float ApplyDeltaRange(const float delta, float value, const float x1, const floa
         cout << delta << endl; */
 
 	return result;
+}
+
+Path MutatePath(const Path& goodPath, const float MutationSize)
+{
+	Path mutatedPath;
+
+	float theta = atan2(goodPath.Direction.y, goodPath.Direction.x);
+	float phi = acos(goodPath.Direction.z);
+
+	//Align to squarelight direction
+	mutatedPath.Direction = alignHemisphereToVector(Vector3(0,-1,0), ApplyDeltaRange(Mutate(MutationSize),theta, 0.f, 2.*PI),
+																		ApplyDeltaRange(Mutate(MutationSize), phi, 0, PI/2.));
+
+	// mutate phi/theta or random numbers?
+	for (int i = 0; i < (TRACE_DEPTH_PHOTONS-1); ++i)
+	{
+		//theta = u1 (0 - 2PI), pi = u2 (0 - PI/2)
+		mutatedPath.u[i*2] = ApplyDeltaRange(Mutate(MutationSize), goodPath.u[i*2], 0.f, 2.*PI);
+		mutatedPath.u[i*2+1] = ApplyDeltaRange(Mutate(MutationSize), goodPath.u[i*2+1], 0, PI/2.);
+	} 
+
+	mutatedPath.Origin.x = ApplyDeltaRange(Mutate(MutationSize), goodPath.Origin.x, -10, 10);
+	mutatedPath.Origin.z = ApplyDeltaRange(Mutate(MutationSize), goodPath.Origin.z, -1, 1);
+
+	return mutatedPath;
 }
 
 bool Scene::UpdateMeasurementPoints(const Vector3& pos, const Vector3& power)
@@ -468,9 +493,9 @@ void Scene::RenderPhotonStats(Vector3 *tempImage, const int width, const int hei
 }
 
 
-bool Scene::SamplePhotonPath(const Ray& path, const Vector3& power)
+bool Scene::SamplePhotonPath(const Path& path, const Vector3& power)
 {
-	return (tracePhoton(path.o, path.d, power, 0, false) > 0);
+	return (tracePhoton(path, path.Origin, path.Direction, power, 0, false) > 0);
 
 /*    HitInfo hitInfo(0, path.o, Vector3(0,1,0));
 
@@ -507,19 +532,20 @@ void Scene::AdaptivePhotonPasses()
 {
 	PointLight *light = m_lights[0];
 	
-    Vector3 power = light->color() * light->wattage(); 
-	Ray goodPath;
+    Vector3 power = light->color() * light->wattage();
+
+	Path goodPath;
 	float prev_di = 1;
 	long mutated = 1;
 	long accepted = 0;
 
-    int Nphotons = 1000000;
+    int Nphotons = 100000;
 
 	//find starting good path
 	do
 	{
-        goodPath.o = light->samplePhotonOrigin();
-        goodPath.d = light->samplePhotonDirection();
+        goodPath.Origin = light->samplePhotonOrigin();
+        goodPath.Direction = light->samplePhotonDirection();
 	} while (!SamplePhotonPath(goodPath, power));
 
     long double msq = 0;
@@ -536,10 +562,10 @@ void Scene::AdaptivePhotonPasses()
         }*/
 
         //Test random photon path
-        Ray path(light->samplePhotonOrigin(), light->samplePhotonDirection());
-		if (SamplePhotonPath(path, power))
+        Path uniformPath(light->samplePhotonOrigin(), light->samplePhotonDirection());
+		if (SamplePhotonPath(uniformPath, power))
 		{
-			goodPath = path;
+			goodPath = uniformPath;
 			++m_photonsUniform;
 			continue;
 		}
@@ -548,22 +574,19 @@ void Scene::AdaptivePhotonPasses()
 		long double di = prev_di + (1. / (long double)mutated) * ((long double)accepted/(long double)mutated - 0.234);
 
 		// Convert to spherical coords (theta phi reversed)
-		float phi = acos(goodPath.d.z);
-		float theta = atan2(goodPath.d.y, goodPath.d.x);
+		/*float phi = acos(goodPath.d.z);
+		float theta = atan2(goodPath.d.y, goodPath.d.x);*/
 
 		// add mutation and convert back to cartesian coords
-		path.d = alignHemisphereToVector(Vector3(0,1,0), ApplyDeltaRange(MutatePath(di),theta, 0.f, 2.*PI), ApplyDeltaRange(MutatePath(di), phi, 0, PI/2.)); 
-        float mut = MutatePath(di); 
-		path.o.x = ApplyDeltaRange(mut, goodPath.o.x, -1.75, 1.75);
-		path.o.z = ApplyDeltaRange(MutatePath(di), goodPath.o.z, -0.05, 0.05);
+		Path mutatedPath = MutatePath(goodPath, di);
 
 		++mutated;
 		prev_di = di;
 
 		// Test mutated photon path
-		if (SamplePhotonPath(path, power))
+		if (SamplePhotonPath(mutatedPath, power))
 		{
-			goodPath = path;
+			goodPath = mutatedPath;
 			++accepted;
 			continue;
 		}
@@ -627,7 +650,7 @@ void Scene::traceProgressivePhotons()
             Vector3 dir = light->samplePhotonDirection();
             Vector3 pos = light->samplePhotonOrigin();
 			//printf("squarelight photon position: %f %f %f and direction %f %f %f \n", pos.x, pos.y, pos.z, dir.x, dir.y, dir.z);
-            tracePhoton(pos, dir, power, 0);
+            //tracePhoton(pos, dir, power, 0);
         }
 
 		m_photonsEmitted += PhotonsPerLightSource;
@@ -643,7 +666,7 @@ void Scene::traceProgressivePhotons()
 }
 
 //Trace a single photon through the scene
-int Scene::tracePhoton(const Vector3& position, const Vector3& direction, const Vector3& power, int depth, bool bCausticRay)
+int Scene::tracePhoton(const Path& path, const Vector3& position, const Vector3& direction, const Vector3& power, int depth, bool bCausticRay)
 {
     PHOTON_DEBUG(endl << "tracePhoton(): pos " << position << ", dir " << direction << ", pwr " << power << ", depth " << depth);
     if (depth > TRACE_DEPTH_PHOTONS) return 0;
@@ -724,11 +747,13 @@ int Scene::tracePhoton(const Vector3& position, const Vector3& direction, const 
 #ifdef STATS
 			Stats::Photon_Bounces++;
 #endif
-            //Shoot out a new diffuse photon
-            Ray r = ray.diffuse(hit);
+            //Shoot out a new diffuse photon 
+			//depth-1 since already incremented
+			Ray r = Ray::alignToVector(hit.N, hit.P, path.u[(depth-1)*2], path.u[(depth-1)*2+1]);
+            r.isDiffuse = true;
             HitInfo diffHit;
             PHOTON_DEBUG("Tracing diffuse photon");
-            return nPhotons + tracePhoton(r.o, r.d, diffuseColor*power/prob[0], depth, bCausticRay);
+            return nPhotons + tracePhoton(path, r.o, r.d, diffuseColor*power/prob[0], depth, bCausticRay);
         }
         else if (rnd < prob[1])
         {
@@ -742,7 +767,7 @@ int Scene::tracePhoton(const Vector3& position, const Vector3& direction, const 
             //Reflect.
             Ray refl = ray.reflect(hit);
             PHOTON_DEBUG("Tracing reflected photon");
-            return tracePhoton(hit.P, refl.d, power, depth, bCausticRay);
+            return tracePhoton(path, hit.P, refl.d, power, depth, bCausticRay);
         }
         else if (rnd < prob[2])
         {
@@ -761,13 +786,13 @@ int Scene::tracePhoton(const Vector3& position, const Vector3& direction, const 
 			{
                 Ray refl = ray.reflect(hit);
                 PHOTON_DEBUG("Tracing reflected photon (Fresnel reflection)");
-                return tracePhoton(hit.P, refl.d, power, depth, bCausticRay);
+                return tracePhoton(path, hit.P, refl.d, power, depth, bCausticRay);
 			}
 			else
 			{
                 Ray refr = ray.refract(hit);
                 PHOTON_DEBUG("Tracing refracted photon");
-                return tracePhoton(hit.P, refr.d, power, depth, bCausticRay);
+                return tracePhoton(path, hit.P, refr.d, power, depth, bCausticRay);
             }
         }
     }

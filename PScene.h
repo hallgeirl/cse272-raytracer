@@ -11,6 +11,32 @@
 class Camera;
 class Image;
 
+struct Path
+{
+	Vector3 Origin;
+	Vector3 Direction;
+	double u[4]; 
+
+	Path(const Vector3& inOrigin, const Vector3& inDirection)
+		:Origin(inOrigin), Direction(inDirection)
+	{
+		init_random();
+	}
+
+	Path()
+	{
+		init_random();
+	}
+
+	void init_random()
+	{
+		for (int i = 0; i < TRACE_DEPTH_PHOTONS*2; ++i)
+		{
+			u[i] = frand();
+		}
+	}
+};
+
 struct HitPoint
 {
 	Vector3 position;
@@ -73,10 +99,10 @@ public:
 	void UpdatePhotonStats();
 	void PrintPhotonStats();
 	void RenderPhotonStats(Vector3 *tempImage, const int width, const int height, float minIntensity, float maxIntensity);
-	bool SamplePhotonPath(const Ray& path, const Vector3& power);
+	bool SamplePhotonPath(const Path& path, const Vector3& power);
 	bool UpdateMeasurementPoints(const Vector3& pos, const Vector3& power);
     void traceProgressivePhotons();
-    int tracePhoton(const Vector3& position, const Vector3& direction, const Vector3& power, int depth, bool bCausticRay=false);
+    int tracePhoton(const Path& path, const Vector3& position, const Vector3& direction, const Vector3& power, int depth, bool bCausticRay=false);
 	long int GetPhotonsEmitted() { return m_photonsEmitted; }
 
 	void setEnvironment(Texture* environment) { m_environment = environment; }
