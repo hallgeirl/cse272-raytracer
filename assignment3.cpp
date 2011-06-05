@@ -126,7 +126,7 @@ makeTask3Scene()
 #endif
     
     //DEBUG
-    SquareLight *l2 = new SquareLight;
+    /*SquareLight *l2 = new SquareLight;
     l2->setDimensions(0.5,0.5);
     l2->setPosition(Vector3(0,0,0));
     Vector3 n(-1,-1,0);
@@ -136,7 +136,7 @@ makeTask3Scene()
     l2->setWattage(100);
     l2->setColor(Vector3(1.f));
     g_scene->addObject(l2);
-	g_scene->addLight(l2);
+	g_scene->addLight(l2);*/
 
     g_scene->preCalc();
 }
