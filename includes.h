@@ -1,6 +1,11 @@
 //Includes from project
 //Core
+#ifdef PHOTON_MAPPING
+#include "PScene.h"
+#else
 #include "Scene.h"
+#endif
+
 #include "Camera.h"
 #include "Image.h"
 #include "Console.h"

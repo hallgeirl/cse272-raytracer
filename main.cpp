@@ -9,7 +9,11 @@
 #include <FreeImage.h>
 #include "Camera.h"
 #include "Image.h"
+#ifdef PHOTON_MAPPING
+#include "PScene.h"
+#else
 #include "Scene.h"
+#endif
 
 using namespace std;
 
@@ -41,7 +45,7 @@ main(int argc, char*argv[])
 #ifdef LINUX
     srand48(time(0));
 #endif
-    srand(time(0));
+//    srand(time(0));
 //mode = 0: Create opengl window and everything
 //mode = 1: Render scenes without any GUI
 //mode = 2: Other things

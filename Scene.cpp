@@ -1,3 +1,5 @@
+
+#ifndef PHOTON_MAPPING
 #include "Utility.h"
 #include <cmath>
 #include <iostream>
@@ -333,8 +335,7 @@ bool Scene::traceScene(const Ray& ray, Vector3& shadeResult, int depth)
     return hit;
 }
 
-Vector3
-Scene::getEnvironmentMap(const Ray & ray)
+Vector3 Scene::getEnvironmentMap(const Ray & ray)
 {
 	Vector3 envResult;
 	//Environment mapping here
@@ -365,3 +366,4 @@ Scene::getEnvironmentMap(const Ray & ray)
 	}
 	return envResult;
 }
+#endif

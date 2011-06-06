@@ -1,6 +1,10 @@
 #include "TriangleMesh.h"
 #include "Triangle.h"
+#ifdef PHOTON_MAPPING
+#include "PScene.h"
+#else
 #include "Scene.h"
+#endif
 
 void 
 createTriangleMesh(const char* filename, Material *mat, Scene* scene, Vector3 position, float rotY, Vector3 scale)

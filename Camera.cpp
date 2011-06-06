@@ -4,9 +4,14 @@
 #include "Miro.h"
 #include "Camera.h"
 #include "Image.h"
-#include "Scene.h"
 #include "Console.h"
 #include "OpenGL.h"
+
+#ifdef PHOTON_MAPPING
+#include "PScene.h"
+#else
+#include "Scene.h"
+#endif
 
 Camera * g_camera = 0;
 

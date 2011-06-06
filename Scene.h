@@ -1,3 +1,4 @@
+#ifndef PHOTON_MAPPING
 #ifndef CSE168_SCENE_H_INCLUDED
 #define CSE168_SCENE_H_INCLUDED
 
@@ -10,28 +11,6 @@
 
 class Camera;
 class Image;
-
-struct HitPoint
-{
-	Vector3 position;
-	Vector3 normal;
-	Vector3 dir;
-	float brdf;
-	//int pixel_x, pixel_y;
-	//float pixel_wgt;
-	double radius;
-	int accPhotons;
-	int newPhotons;
-	long double accFlux;
-	long double newFlux;
-    float scaling;
-
-	HitPoint()
-		:position(0.f), normal(0.f), dir(0.f), brdf(1.f), radius(0.f), accPhotons(0), newPhotons(0), accFlux(0.f), newFlux(0.f), scaling(1)
-	{}
-};
-
-typedef std::vector<HitPoint*> HitPoints;
 
 class Scene
 {
@@ -51,11 +30,7 @@ public:
     void addLight(PointLight* pObj)     {m_lights.push_back(pObj);}
     const Lights* lights() const        {return &m_lights;}
 
-	void addHitPoint (HitPoint* hp)		{m_hitpoints.push_back(hp);}
-	const HitPoints* hitpoints() const	{return &m_hitpoints;}
-
     void generatePhotonMap();
-    void ProgressivePhotonPass();
 
     void preCalc();
     void openGL(Camera *cam);
@@ -68,7 +43,6 @@ public:
 
     void tracePhotons();
     void traceCausticPhotons();
-    void traceProgressivePhotons();
     int tracePhoton(const Vector3& position, const Vector3& direction, const Vector3& power, int depth, bool bCausticRay=false);
 	long int GetPhotonsEmitted() { return m_photonsEmitted; }
 
@@ -88,7 +62,6 @@ protected:
     Photon_map m_causticMap;
     BVH m_bvh;
     Lights m_lights;
-	HitPoints m_hitpoints;
     Texture * m_environment; //Environment map
     Vector3 m_bgColor;       //Background color (for when environment map is not available)
 
@@ -103,3 +76,4 @@ protected:
 extern Scene * g_scene;
 
 #endif // CSE168_SCENE_H_INCLUDED
+#endif

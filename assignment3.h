@@ -12,8 +12,8 @@ void a3task3();
 void a3hacker1();
 void BuildSquare(const Vector3& min, const Vector3& max, const Vector3& normal, const Material* mat);
 
-#define W 512
-#define H 512
+#define W 256
+#define H 256
 
 //for bidirectional path tracing
 struct hit_point

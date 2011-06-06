@@ -239,11 +239,7 @@ sample sampleBidirectionalPath(const path& eyepath, const path& lightpath, int w
                 if (primary)
                 {
                     out.direct = true;
-//                    eyehits[eye_points].x = hitInfo.P;
-//                    eyehits[eye_points].N = hitInfo.N;
-//                    eyehits[eye_points].contrib = contribution
-//                    eye_points++;
-                    out.value = contribution*l->radiance(hitInfo.P, eye_ray.d);
+//                    out.value = contribution*l->radiance(hitInfo.P, eye_ray.d);
                 }
             }
             //hit reflective surface => reflect and trace again
@@ -307,7 +303,6 @@ sample sampleBidirectionalPath(const path& eyepath, const path& lightpath, int w
                 }
             }
         }
-
     }
 
     return out;
