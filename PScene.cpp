@@ -393,9 +393,9 @@ bool Scene::UpdateMeasurementPoints(const Vector3& pos, const Vector3& power)
 
 		if (d <= hp->radius)
 		{
-			//wait to update radius and flux
+			//wait to update radius and flux * BRDF
 			hp->newPhotons++;
-			hp->newFlux += power.x;
+			hp->newFlux += power.x * hp->brdf;
 
 			// can hit multiple measurement points	
 			hit = true;
@@ -552,7 +552,7 @@ void Scene::AdaptivePhotonPasses()
 	for (m_photonsEmitted = 0; m_photonsEmitted < Nphotons; m_photonsEmitted++)
     {
 		printf("photons emitted: %d\n", m_photonsEmitted);
-		if (m_photonsEmitted > 0 && m_photonsEmitted % 1000000 == 0)
+		if (m_photonsEmitted > 0 && m_photonsEmitted % 100000 == 0)
 		{
 			UpdatePhotonStats();
 		}
@@ -713,8 +713,10 @@ int Scene::tracePhoton(const Path& path, const Vector3& position, const Vector3&
             //only store indirect lighting -- but store direct lighting for progressive mapping
             //if (depth > 1)
             {
-				UpdateMeasurementPoints(hit.P, power);
-				nPhotons++;
+				// onlu increment photons stored if hit a measurement point
+				if (UpdateMeasurementPoints(hit.P, power))
+					nPhotons++;
+
                 //float pos[3] = {hit.P.x, hit.P.y, hit.P.z}, dir[3] = {direction.x, direction.y, direction.z}, pwr[3] = {power.x, power.y, power.z};
 #               //ifdef OPENMP
 #               //pragma omp critical
