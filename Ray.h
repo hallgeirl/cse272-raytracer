@@ -94,6 +94,7 @@ class Ray
 
             Ray random = alignToVector(hitInfo.N, hitInfo.P, theta, phi);
             random.isDiffuse = true;
+            random.o += random.d*epsilon;
 
             return random;
         }
@@ -125,7 +126,7 @@ class Ray
 //
 //            return alignToVector(d_reflect, hitInfo.P, theta, phi);
 //#else
-            Vector3 d_r = d - 2 * dot(hitInfo.N, d) * hitInfo.N;
+            Vector3 d_r = d - 2. * dot(hitInfo.N, d) * hitInfo.N;
 			d_r.normalize();
             Ray reflect(hitInfo.P, d_r);
             return reflect;

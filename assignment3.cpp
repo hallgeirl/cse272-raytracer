@@ -107,12 +107,12 @@ makeTask3Scene()
 	BuildSquare(Vector3(-1-e,-1,-1), Vector3(-1,1,1), Vector3(1,0,0), new Phong(Vector3(0), Vector3(0.75)));
 #ifdef HACKER3
     //Hackerpoint: Red wall
-	BuildSquare(Vector3(1+e,-1,-1), Vector3(1,1,1), Vector3(-1,0,0), new Phong(Vector3(0.75,0,0)));
+	BuildSquare(Vector3(1+e,-1,-1), Vector3(1-e,1,1), Vector3(-1,0,0), new Phong(Vector3(0.75,0,0)));
 #else
 	// Right Wall
-	BuildSquare(Vector3(1+e,-1,-1), Vector3(1,1,1), Vector3(-1,0,0), new Phong(Vector3(0.75)));
+	BuildSquare(Vector3(1+e,-1,-1), Vector3(1-e,1,1), Vector3(-1,0,0), new Phong(Vector3(0.75)));
 #endif
-	// Ceiling
+//	// Ceiling
 	BuildSquare(Vector3(0.05,1,-1), Vector3(1,1,1), Vector3(0,-1,0), new Phong(0.75));
 	BuildSquare(Vector3(-0.95,1,-1), Vector3(0,1,1), Vector3(0,-1,0), new Phong(0.75));
 
@@ -125,8 +125,192 @@ makeTask3Scene()
     g_scene->addObject(sp);
 #endif
     
-
     g_scene->preCalc();
+}
+
+sample sampleBidirectionalPath(const path& eyepath, const path& lightpath, int w, int h)
+{
+    //Debug
+    static int nrays = 0;
+    nrays++;
+
+    sample out;
+    Ray eye_ray = g_camera->eyeRay((int)(eyepath.u[0]*(double)W), (int)(eyepath.u[1]*(double)H), W, H, false);
+    
+    Ray light_ray(g_l->getPhotonOrigin(lightpath.u[0], lightpath.u[1]), g_l->samplePhotonDirection(lightpath.u[2], lightpath.u[3]));
+
+    int eye_depth = EYE_PATH_LENGTH;
+    int light_depth = LIGHT_PATH_LENGTH;
+    int pathpos = 4; //next random number to be used is at index 4 (light path)
+
+
+    HitInfo hitInfo;
+    PointLight* l;
+    Vector3 contribution(1./PI,1./PI,1./PI); //Current contribution
+    contribution.set(1);
+
+    int light_points;   //Number of hit points for the light path
+    int eye_points = 0; //Number of hit points for the eye path
+    hit_point lighthits[LIGHT_PATH_LENGTH+1]; //Hit points for light path (there is one hit point at the lightsource itself, so +1)
+    hit_point eyehits[EYE_PATH_LENGTH];       //Hit points for the eye path
+    Vector3 flux(g_l->wattage()/g_l->area());
+
+    //First point is at the light source
+    lighthits[0].x = light_ray.o;
+    lighthits[0].contrib = flux;
+    light_points = 1;
+    
+    out.hit = true;
+
+    //Path trace from light source
+    while (light_depth > 0)
+    {
+        if (g_scene->trace(hitInfo, light_ray, 0, MIRO_TMAX))
+        {
+            //Did we hit the light? If so, bail out
+            l = dynamic_cast<PointLight*>(hitInfo.object);
+            if (l != NULL)
+            {
+                light_depth = -1;
+            }
+            //hit reflective surface => reflect and trace again
+            else if (hitInfo.material->isReflective())
+            {
+                light_ray = light_ray.reflect(hitInfo);
+                flux = flux * hitInfo.material->getReflection();
+            }
+            //Hit a refractive surface?
+            else if (hitInfo.material->isRefractive())
+            {
+                //Push the hit point inside (or outside if on the way out) the refractive object
+                hitInfo.P += light_ray.d*epsilon*2.;
+                light_ray = light_ray.refract(hitInfo);
+                flux = flux * hitInfo.material->getRefraction();
+            }
+            //Did we hit a diffuse object?
+            else
+            {
+                if (dot(light_ray.d, hitInfo.N) < 0)
+                {
+                    flux = flux * hitInfo.material->getDiffuse();
+                    light_ray = light_ray.diffuse(hitInfo, lightpath.u[pathpos], lightpath.u[pathpos+1]);
+                    pathpos += 2;
+                    lighthits[light_points].x = hitInfo.P;
+                    lighthits[light_points].contrib = flux;
+                    lighthits[light_points].N = hitInfo.N;
+                    light_points++;
+                }
+                else
+                {
+                    //Hit on wrong side of the geometry, so terminate ray
+                    light_depth = -1;
+                }
+
+            }
+            light_depth--;
+        }
+        //Missed the scene
+        else 
+        {
+            light_depth = -1;
+        }
+    }
+    
+    pathpos = 2;
+    double weight = 1./(double)(EYE_PATH_LENGTH+LIGHT_PATH_LENGTH);
+    bool primary = true;
+
+    int pathcount[EYE_PATH_LENGTH]; //Number of paths of each length [index i has the number of paths of length i+1]
+
+//    if (nrays > 1000000)
+//        cout << light_points << "\n";
+
+    //Path trace from eye
+    while (eye_depth > 0)
+    {
+        if (g_scene->trace(hitInfo, eye_ray, 0, MIRO_TMAX))
+        {
+            //Did we hit the light after ? If so, we're done. We already sampled the light source.
+            l = dynamic_cast<PointLight*>(hitInfo.object);
+            if (l != NULL)
+            {
+                eye_depth = -1;
+                //If it's a primary ray, we have an E-L path; this must be given a contribution.
+                if (primary)
+                {
+                    out.direct = true;
+//                    eyehits[eye_points].x = hitInfo.P;
+//                    eyehits[eye_points].N = hitInfo.N;
+//                    eyehits[eye_points].contrib = contribution
+//                    eye_points++;
+                    out.value = contribution*l->radiance(hitInfo.P, eye_ray.d);
+                }
+            }
+            //hit reflective surface => reflect and trace again
+            else if (hitInfo.material->isReflective())
+            {
+                eye_ray = eye_ray.reflect(hitInfo);
+                contribution = contribution * hitInfo.material->getReflection();
+            }
+            //Hit a refractive surface?
+            else if (hitInfo.material->isRefractive())
+            {
+                //Push the hit point inside (or outside if on the way out) the refractive object
+                hitInfo.P += eye_ray.d*epsilon*2.;
+                eye_ray = eye_ray.refract(hitInfo);
+                contribution = contribution * hitInfo.material->getRefraction();
+            }
+            //Did we hit a diffuse object?
+            else
+            {
+                eye_points++;
+                contribution = contribution * hitInfo.material->getDiffuse();
+                //Next ray is a diffuse reflection ray
+                eye_ray = eye_ray.diffuse(hitInfo, eyepath.u[pathpos], eyepath.u[pathpos+1]);
+
+                eyehits[eye_points].x = hitInfo.P;
+                eyehits[eye_points].N = hitInfo.N;
+                eyehits[eye_points].contrib = contribution;
+                eye_points++;
+
+                //Shoot shadow rays 
+                pathpos += 2;
+            }
+            eye_depth--;
+        }
+        //Missed the scene
+        else 
+        {
+            eye_depth = -1;
+        }
+        primary = false;
+    }
+
+    if (!out.direct)
+    {
+        HitInfo hitTmp;
+        for (int i = 0; i < eye_points; i++)
+        {
+            for (int j = 0; j < light_points; j++)
+            {
+                Vector3 l = lighthits[i].x-hitInfo.P;
+                double length = l.length();
+
+                //Weight is 1/n where n is the number of paths that has eye_points eye points as prefixes and i light points as suffixes
+                weight = 1./(double)(i+eye_points);
+                l /= length;
+                Ray shadow(hitInfo.P, l);
+                if (!g_scene->trace(hitTmp, shadow, 0, length-epsilon))
+                {
+                    //                        cout << "shadow ray " << contribution << ";; " << weight << ";; " << lighthits[i].flux << endl;
+                    out.value += contribution*weight*lighthits[i].contrib*abs(dot(shadow.d, hitInfo.N));
+                }
+            }
+        }
+
+    }
+
+    return out;
 }
 
 sample samplePath(const path& p, int w, int h)
@@ -141,12 +325,6 @@ sample samplePath(const path& p, int w, int h)
     HitInfo hitInfo;
     PointLight* l;
     Vector3 contribution(1./PI,1./PI,1./PI); //Current contribution (decreases if surface we hit has reflectance < 1)
-
-    bool specular = false;
-    bool diffuse = false;
-
-    static int nrays = 0;
-    nrays++;
 
     //Path trace
     while (depth > 0 && !out.hit)
@@ -192,251 +370,6 @@ sample samplePath(const path& p, int w, int h)
         }
     }
     return out;
-}
-
-float MutatePath(const float MutationSize)
-{
-	return ((2 * frand() - 1) > 0 ? 1 : -1) * pow(frand(), 1.f/MutationSize+1);
-}
-
-float ApplyDeltaRange(const float delta, float value, const float x1, const float x2)
-{
-	float range = x2 - x1;
-    float delta_ = delta;
-    /*if (delta < -range) delta_ = -range;
-    if (delta > range) delta_ = range;*/
-    float result = value + delta_;
-    
-	if (result < x1)
-		result += range;
-	else if ( result > x2)
-		result -= range;
-
-	return result;
-}
-
-bool UpdateMeasurementPoints(const Vector3& pos, const Vector3& power)
-{
-	bool hit = false;
-
-	for (int n = 0; n <  g_scene->hitpoints()->size(); ++n)
-	{
-		HitPoint *hp = (*g_scene->hitpoints())[n];
-		float d = sqrt(pow(pos.x - hp->position.x, 2) +
-			pow(pos.y - hp->position.y, 2) +
-			pow(pos.z - hp->position.z, 2));
-
-		if (d <= hp->radius)
-		{
-			//wait to update radius and flux
-			hp->newPhotons++;
-			hp->newFlux += power.x;
-
-			// can hit multiple measurement points	
-			hit = true;
-		}
-	}
-	return hit;
-}
-
-void UpdatePhotonStats()
-{
-    cout << "Alphas:" << endl;
-	for (int n = 0; n < g_scene->hitpoints()->size(); ++n)
-	{
-		HitPoint *hp = (*g_scene->hitpoints())[n];
-        double f_alpha = (long double)hp->accPhotons*5e-6;
-
-        float alpha = PHOTON_ALPHA + (1.-PHOTON_ALPHA)*(1.-exp(-f_alpha));
-        cout << alpha << "\t";
-
-        // Set scaling factor for next photon pass
-        float A = PI * pow(hp->radius, 2);
-        float A1 = A;
-
-        CircleSegment(Vector3(-1,0,-1), Vector3(0,0,1), hp->radius, hp->position, A1); 
-        CircleSegment(Vector3(1,0,-1), Vector3(0,0,1), hp->radius, hp->position, A1);
-        (*g_scene->hitpoints())[n]->scaling = A1/A;
-		
-		// only adding a ratio of the newly added photons
-		float delta = (hp->accPhotons + alpha * hp->newPhotons)/(hp->accPhotons + hp->newPhotons);
-		hp->radius *= sqrt(delta);
-		hp->accPhotons += (int)(alpha * hp->newPhotons);
-		
-		// not sure about this flux acc, or about calculating the irradiance
-		hp->accFlux = ( hp->accFlux + hp->newFlux/hp->scaling) * delta;	
-
-		// reset new values
-		hp->newPhotons = 0;
-		hp->newFlux = 0.f;
-	}
-    cout << endl;
-}
-
-//void PrintPhotonStats(ofstream& fp, const float photonsEmitted, const float uniform)
-void PrintPhotonStats(stringstream ss[100], const long double photonsEmitted, const long double uniform)
-{
-	for (int n = 0; n <  g_scene->hitpoints()->size(); ++n)
-	{
-		HitPoint *hp = (*g_scene->hitpoints())[n];
-
-		long double A = PI * pow(hp->radius, 2);
-
-		long double result = hp->accFlux / A / photonsEmitted * (uniform / photonsEmitted);
-		
-		ss[n] << result << "\t";
-	}
-}
-
-bool SamplePhotonPath(const Ray& path, const Vector3& power)
-{
-    HitInfo hitInfo(0, path.o, Vector3(0,1,0));
-
-	Ray ray(path.o, path.d);
-
-    while (true)
-    {
-        if (g_scene->trace(hitInfo, ray, 0, MIRO_TMAX))
-        {
-			//return if hit triangle backface
-			if (dot(ray.d, hitInfo.N) > 0)
-				return false;
-
-            //hit diffuse surface->we're done
-            if (!hitInfo.material->isReflective())
-            {
-                return UpdateMeasurementPoints(hitInfo.P, power);
-            }
-            //hit reflective surface => reflect and trace again
-            else 
-            {
-                ray = ray.reflect(hitInfo);
-            }
-        }
-        //Missed the scene
-        else 
-        {
-            return false;
-        }
-    }
-}
-
-void a3task2()
-{
-    long double ptracing_output[100];
-    ofstream msq_fp("adaptiveppm_msq.dat");
-
-    //Get path tracing results from last iteration
-    {
-        cout << "Loading path tracing results..." << endl;
-        char tmpbuf[100000];
-        ifstream fp_tmp("pathtracing_irrad.dat");
-        if (!fp_tmp.is_open())
-            memset(ptracing_output,0,sizeof(long double)*100);
-        else
-        {
-            int i = 0;
-
-            while (!fp_tmp.getline(tmpbuf,100000).eof())
-            {
-                stringstream ss(tmpbuf);
-                while (ss >> ptracing_output[i]) {}
-                i++;
-            }
-            fp_tmp.close();
-        }
-    }
-
-	//find starting good path
-    Vector3 power = g_l->color() * g_l->wattage(); 
-	Ray goodPath;
-	int m_photonsEmitted;
-	float prev_di = 1;
-	long mutated = 1;
-	long accepted = 0;
-	long uniform = 0;
-
-    int Nphotons = 100000000;
-    const int N = 100;
-    stringstream ss_out[N];
-	do
-	{
-        goodPath.o = g_l->samplePhotonOrigin();
-        goodPath.d = g_l->samplePhotonDirection();
-	} while (!SamplePhotonPath(goodPath, power));
-
-    long double msq = 0;
-	for (m_photonsEmitted = 0; m_photonsEmitted < Nphotons; m_photonsEmitted++)
-    {
-
-		if (m_photonsEmitted > 0 && m_photonsEmitted % 1000000 == 0)
-		{
-			UpdatePhotonStats();
-            msq = 0;
-            for (int i = 0; i < N; i++)
-            {
-                HitPoint* hp = g_scene->hitpoints()->at(i);
-
-                long double A = PI * pow(hp->radius, 2);
-                long double result = hp->accFlux / A / (long double)m_photonsEmitted * ((long double)uniform / (long double)m_photonsEmitted);
-
-                long double err = result-ptracing_output[i];
-                long double err_sq = err*err;
-
-                msq += err_sq;
-            }
-            msq /= N;
-            msq_fp << m_photonsEmitted << " " << msq << endl;
-            cout << "Pass " << m_photonsEmitted / 100000 << " of " << Nphotons/100000 << ", msq=" << msq << endl;
-		}
-        if (m_photonsEmitted > 0 && m_photonsEmitted % 100000 == 0)
-        {
-			PrintPhotonStats(ss_out, m_photonsEmitted, (long double)uniform);
-        }
-
-        //Test random photon path
-        Ray path(g_l->samplePhotonOrigin(), g_l->samplePhotonDirection());
-		if (SamplePhotonPath(path, power))
-		{
-			goodPath = path;
-			++uniform;
-			continue;
-		}
-
-		//Mutatation size
-		long double di = prev_di + (1. / (long double)mutated) * ((long double)accepted/(long double)mutated - 0.234);
-
-		// Convert to spherical coords (theta phi reversed)
-		float phi = acos(goodPath.d.z);
-		float theta = atan2(goodPath.d.y, goodPath.d.x);
-
-		// add mutation and convert back to cartesian coords
-		path.d = alignHemisphereToVector(Vector3(0,1,0), ApplyDeltaRange(MutatePath(di),theta, 0.f, 2.*PI), ApplyDeltaRange(MutatePath(di), phi, 0, PI/2.)); 
-        float mut = MutatePath(di); 
-		path.o.x = ApplyDeltaRange(mut, goodPath.o.x, -1.75, 1.75);
-		path.o.z = ApplyDeltaRange(MutatePath(di), goodPath.o.z, -0.05, 0.05);
-
-		++mutated;
-		prev_di = di;
-
-		// Test mutated photon path
-		if (SamplePhotonPath(path, power))
-		{
-			goodPath = path;
-			++accepted;
-			continue;
-		}
-		// Reuse good path
-		SamplePhotonPath(goodPath, power);		
-    }
-
-	UpdatePhotonStats();
-	PrintPhotonStats(ss_out, m_photonsEmitted, uniform);
-
-    ofstream fp("adaptiveppm_irrad.dat");
-    for (int i = 0; i < N; i++)
-        fp << ss_out[i].str().c_str() << endl;
-    fp.close();
 }
 
 double mutate_value(double s1, double s2)
@@ -520,6 +453,10 @@ void a3task3()
 
         int w_pt, h_pt;
         long double b_pt = 0;
+        if (!ptracing.is_open())
+        {
+            w_pt = W; h_pt = H;
+        }
         ptracing.read((char*)&w_pt, 4);
         ptracing.read((char*)&h_pt, 4);
         cout << "Loading path tracing results [width=" << w_pt << ", height " << h_pt << "]" << endl;
@@ -529,9 +466,12 @@ void a3task3()
             for (int j = 0; j < w_pt; j++)
             {
                 Vector3 pix(0);
-                ptracing.read((char*)&pix.x, sizeof(float));
-                ptracing.read((char*)&pix.y, sizeof(float));
-                ptracing.read((char*)&pix.z, sizeof(float));
+                if (ptracing.is_open())
+                {
+                    ptracing.read((char*)&pix.x, sizeof(float));
+                    ptracing.read((char*)&pix.y, sizeof(float));
+                    ptracing.read((char*)&pix.z, sizeof(float));
+                }
                 b_pt += pix.average();
                 ptracing_results[i].push_back(pix);
             }
@@ -546,13 +486,7 @@ void a3task3()
     path p_init;
     p_init.I = 0;
 
-    ofstream msq_out;
-
-    {
-        char filename[100];
-        sprintf(filename, "metropolis_%s_msq.dat\0", version);
-        msq_out.open(filename);
-    }
+    stringstream msq_out;
 
     //Generate path seeds
     for (int i = 1; i <= Nseeds; i++)
@@ -595,8 +529,6 @@ void a3task3()
     path p0;
     p0.I = 0;
     path_copy(p0, p_init);
-
-    memset(img, 0, W*H*sizeof(Vector3));
 
     for (long i = 1; i <= Nsamples; i++)
     {
@@ -698,4 +630,247 @@ void a3task3()
     }
 
     cout << "Resulting b: " << b_result/(double)W/(double)H << endl;
+
+    //write msq
+    {
+        ofstream msq_outfile;
+        char filename[100];
+        sprintf(filename, "metropolis_%s_msq.dat\0", version);
+        msq_outfile.open(filename);
+        msq_outfile << msq_out.str().c_str();
+    }
+
+}
+
+////Bidirectional path tracing
+void a3hacker1()
+{
+    const int Nseeds = 1000000;
+    const long Nsamples = 100000000;
+
+    //Record the error after every this many samples
+    const int error_interval = 100000;
+
+    Vector3 img[W][H];
+    memset(img, 0, W*H*sizeof(Vector3));
+
+    cout << "Bidirectional metropolis path tracing" << endl;
+    cout << Nsamples / (W*H) << " samples per pixel." << endl;
+
+#ifdef HACKER2
+    const char* version = "sphere";
+#elif defined (HACKER3)
+    const char* version = "red";
+#else
+    const char* version = "gray";
+#endif
+
+    vector<vector<Vector3> > ptracing_results;
+
+    {
+        //Load image from task 1
+        ifstream ptracing;
+        char filename[100];
+        sprintf(filename, "pathtracing_%s.raw\0", version);
+        ptracing.open(filename, ios::binary);
+
+        int w_pt, h_pt;
+        long double b_pt = 0;
+        if (!ptracing.is_open())
+        {
+            w_pt = W; h_pt = H;
+        }
+        ptracing.read((char*)&w_pt, 4);
+        ptracing.read((char*)&h_pt, 4);
+        cout << "Loading path tracing results [width=" << w_pt << ", height " << h_pt << "]" << endl;
+        for (int i = 0; i < h_pt; i++)
+        {
+            ptracing_results.push_back(vector<Vector3>());
+            for (int j = 0; j < w_pt; j++)
+            {
+                Vector3 pix(0);
+                if (ptracing.is_open())
+                {
+                    ptracing.read((char*)&pix.x, sizeof(float));
+                    ptracing.read((char*)&pix.y, sizeof(float));
+                    ptracing.read((char*)&pix.z, sizeof(float));
+                }
+                b_pt += pix.average();
+                ptracing_results[i].push_back(pix);
+            }
+        }
+        b_pt /= (long double)(w_pt*h_pt);
+        cout << "Done reading path tracing results. b = " << b_pt << endl;
+    }
+    cout << "Generating path seeds..." << endl;
+
+    long double b = 0;
+
+    path p_init_eye, p_init_light;
+    p_init_eye.I = 0;
+    p_init_light.I = 0;
+
+    stringstream msq_out;
+
+    //Generate path seeds
+    for (int i = 1; i <= Nseeds; i++)
+    {
+        path p_tmp_eye, p_tmp_light;
+
+        p_tmp_eye.init_random();
+        p_tmp_light.init_random();
+
+        sample s = sampleBidirectionalPath(p_tmp_eye, p_tmp_light, W, H);
+
+        if (s.hit)
+        {
+            long double I = s.value.average();
+            b += I*PI;
+
+            //is it a better path?
+            if (p_init_eye.I < I && !s.direct)
+            {
+                path_copy(p_init_eye, p_tmp_eye);
+                path_copy(p_init_light, p_tmp_light);
+                p_init_eye.I = I;
+                cout << "Best: " << I << endl;
+            }
+        }
+    }
+
+    b /= Nseeds;
+
+    cout << "b=" << b << endl;
+
+    double b_result = 0;
+    double msq = 0;
+    //Initialize msq
+    for (int y = 0; y < H; y++)
+    {
+        for (int x = 0; x < W; x++)
+        {
+            double res = ptracing_results[y][x].average();
+            msq += res*res;
+        }
+    }
+    msq /= (double)(H*W);
+
+
+    path p0_eye, p0_light;
+
+    p0_eye.I = 0;
+    path_copy(p0_eye, p_init_eye);
+    path_copy(p0_light, p_init_light);
+
+    for (long i = 1; i <= Nsamples; i++)
+    {
+        if (i % (Nsamples/1000) == 0)
+        {
+            printf("\rProgress: %f%% MSQ: %lf", (float)(100.*(double)i/(double)Nsamples), msq);
+            fflush(stdout);
+        }
+
+        //Compute error vs. reference
+        if (i % error_interval == 0)
+        {
+            msq = 0;
+            bool writeImage = false;
+            if (i == 100000 || i == 1000000 || i == 10000000 || i == 100000000)
+                writeImage = true;
+
+            for (int y = 0; y < H; y++)
+            {
+                for (int x = 0; x < W; x++)
+                {
+                    //Compute pixel value
+                    Vector3 result = img[x][y]*b*(double)W*(double)H/(double)i;
+                    msq += pow((ptracing_results[y][x] - result).average(), 2);
+
+                    if (writeImage)
+                    {
+                        //Gamma correct
+                        for (int i = 0; i < 3; i++)
+                        {
+                            result[i] = pow(result[i], 1.f/2.2f);
+                        }
+                        g_image->setPixel(x,y,result);
+                    }
+                }
+            }
+
+            msq /= (double)(W*H);
+            msq_out << msq << endl;
+
+            if (writeImage)
+            {
+                char filename[100];
+
+                sprintf(filename, "bidirectional_%s_%ld.ppm\0", version, i);
+                cout << "\nWriting " << filename << "..." << endl;
+                g_image->writePPM(filename);
+            }
+        }
+
+        //Mutate path. 
+        path p1_eye, p1_light;
+        mutate_path(p0_eye, p1_eye);
+        mutate_path(p0_light, p1_light);
+
+        sample s = sampleBidirectionalPath(p1_eye, p1_light, W, H);
+
+        p1_eye.I = s.value.average();
+        p1_eye.F = s.value;
+
+        double accept;
+
+        int x0 = (int)(p0_eye.u[0]*(double)W), y0 = (int)(p0_eye.u[1]*(double)H);
+        int x1 = (int)(p1_eye.u[0]*(double)W), y1 = (int)(p1_eye.u[1]*(double)H);
+        if (x0 == W) x0--;
+        if (y0 == H) y0--;
+        if (x1 == W) x1--;
+        if (y1 == H) y1--;
+
+        //Add contribution to pixels
+        accept = std::min(p1_eye.I / p0_eye.I, 1.);
+        if (p0_eye.I > 0)
+            img[x0][y0] += (1.-accept)*(p0_eye.F / p0_eye.I);
+        if (p1_eye.I > 0)
+            img[x1][y1] += accept * (p1_eye.F / p1_eye.I);
+
+        if (frand() < accept)
+        {
+            path_copy(p0_eye, p1_eye);
+            path_copy(p0_light, p1_light);
+        }
+    }
+
+    printf("\n");
+    for (int x = 0; x < W; x++)
+    {
+        for (int y = 0; y < H; y++)
+        {
+            //Compute pixel value
+            Vector3 result = img[x][y]*b*(double)W*(double)H/(double)Nsamples;
+            b_result += result.average();
+
+            //Gamma correct
+            for (int i = 0; i < 3; i++)
+            {
+                result[i] = pow(result[i], 1.f/2.2f);
+            }
+            g_image->setPixel(x,y,result);
+        }
+    }
+
+    cout << "Resulting b: " << b_result/(double)W/(double)H << endl;
+
+    //write msq
+    {
+        ofstream msq_outfile;
+        char filename[100];
+        sprintf(filename, "bidirectional_%s_msq.dat\0", version);
+        msq_outfile.open(filename);
+        msq_outfile << msq_out.str().c_str();
+    }
+
 }

@@ -28,7 +28,16 @@ public:
 
     virtual Vector3 center() const    { return m_position;  }
 
-    float radiance(const Vector3& x, const Vector3& incdir) const { return m_wattage / (PI*m_dimensions[0]*m_dimensions[1]); } 
+    Vector3 getTangentU() const { return m_tangent1; } 
+    Vector3 getTangentV() const { return m_tangent1; } 
+
+    float radiance(const Vector3& x, const Vector3& incdir) const 
+    { 
+        if (dot(incdir, m_normal) < 0)
+            return m_wattage / (PI*m_dimensions[0]*m_dimensions[1]); 
+        else
+            return 0;
+    } 
 
     void setNormal(Vector3 n) 
     { 
@@ -42,6 +51,7 @@ public:
 
     virtual bool intersect(HitInfo& hit, const Ray& ray, float tmin, float tmax)
     {
+        if (dot(ray.d, m_normal) > 0) return false;
         HitInfo tmphit;
         bool hit1 = m_triangles[0].intersect(hit, ray, tmin, tmax);
      
@@ -62,6 +72,15 @@ public:
     float area() { return m_dimensions[0] * m_dimensions[1]; }
     void setUdir(const Vector3& udir) { m_tangent1 = udir; hasTangent1 = true; }
 
+    //Get the position on the square light given two coordinates in [0,1]
+    virtual Vector3 getPhotonOrigin(double u1, double u2) const  
+    {
+        float du = m_dimensions[0];
+        float dv = m_dimensions[1];
+
+		// Add epsilon in normal direction to prevent photons from hitting light mesh
+        return m_position + m_tangent1*((u1-0.5)*du) + m_tangent2*((u2-0.5)*dv) + m_normal*epsilon;
+    }
     virtual Vector3 samplePhotonOrigin(int sampleNumber = 0, int totalSamples = 1) const  
     {
         //Take samples within a subdivided rectangle. For simplicity we assume that the light is square so we have nxn cells.
@@ -86,6 +105,15 @@ public:
         //bias to the light normal
         float phi = asin(sqrt(frand()));
         float theta = 2.0f * PI * (frand());
+
+        return alignHemisphereToVector(m_normal, theta, phi);
+    }
+
+    virtual Vector3 samplePhotonDirection(double u1, double u2) const
+    {
+        //bias to the light normal
+        float phi = asin(sqrt(u1));
+        float theta = 2.0f * PI * u2;
 
         return alignHemisphereToVector(m_normal, theta, phi);
     }
