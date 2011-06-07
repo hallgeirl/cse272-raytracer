@@ -81,7 +81,7 @@ Scene::preCalc()
 
 inline float tonemapValue(float value, float maxIntensity)
 {
-    return pow(value, 1./2.2);
+    return pow(value, (float)(1./2.2));
 //    return value;
 //    return sigmoid(20*value-2.5);
     //return std::min(pow(value / maxIntensity, 0.35f)*1.1f, 1.0f);
@@ -161,9 +161,6 @@ Scene::raytraceImage(Camera *cam, Image *img)
             #pragma unroll(3)
             for (int k = 0; k < 3; k++)
             {
-                if (finalColor[k] != finalColor[k])
-                    finalColor[k] = maxIntensity;
-                
                 finalColor[k] = tonemapValue(finalColor[k], maxIntensity);
             }
             img->setPixel(j, i, finalColor);
@@ -422,6 +419,10 @@ void Scene::UpdatePhotonStats()
 		if (!hp->bHit)
 			continue;
 
+		// continue if no new photons have been added
+		if(hp->newPhotons == 0)
+			continue;
+
         double f_alpha = (long double)hp->accPhotons*5e-6;
 
         float alpha = PHOTON_ALPHA + (1.-PHOTON_ALPHA)*(1.-exp(-f_alpha));
@@ -439,7 +440,8 @@ void Scene::UpdatePhotonStats()
 		hp->accPhotons += (int)(alpha * hp->newPhotons);
 		
 		// not sure about this flux acc, or about calculating the irradiance
-		hp->accFlux = ( hp->accFlux + hp->newFlux/hp->scaling) * delta;	
+		hp->accFlux = ( hp->accFlux + hp->newFlux) * delta;	
+		//hp->accFlux = ( hp->accFlux + hp->newFlux/hp->scaling) * delta;	
 
         //cout << hp->accFlux << "\t" << hp->accPhotons << "\t" << hp->radius << "\n";
 
@@ -463,10 +465,8 @@ void Scene::PrintPhotonStats()
 	}
 }
 
-void Scene::RenderPhotonStats(Vector3 *tempImage, const int width, const int height, float minIntensity, float maxIntensity)
+void Scene::RenderPhotonStats(Vector3 *tempImage, const int width, const int height, float& minIntensity, float& maxIntensity)
 {
-	float localMaxIntensity = -infinity, localMinIntensity = infinity;
-
 	int n;
 	for (n = 0; n <  m_Points.size(); ++n)
 	{
@@ -478,6 +478,12 @@ void Scene::RenderPhotonStats(Vector3 *tempImage, const int width, const int hei
 			continue;
 		}
 
+		if (hp->accFlux < epsilon)
+		{
+			tempImage[hp->i*width+hp->j] = 0.f;
+			continue;
+		}
+
 		long double A = PI * pow(hp->radius, 2);
 
 		long double result = hp->accFlux / A / (long double)m_photonsEmitted * ((long double)m_photonsUniform / (long double)m_photonsEmitted);
@@ -486,6 +492,7 @@ void Scene::RenderPhotonStats(Vector3 *tempImage, const int width, const int hei
 
 		if (tempImage[hp->i*width+hp->j].x < minIntensity) minIntensity = tempImage[hp->i*width+hp->j].x;
         if (tempImage[hp->i*width+hp->j].x > maxIntensity) maxIntensity = tempImage[hp->i*width+hp->j].x;
+
 	}
 	if (n != (width*height))
 		debug("Measurement points do not equal image dimensions");
