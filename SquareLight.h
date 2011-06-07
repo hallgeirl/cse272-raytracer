@@ -33,10 +33,10 @@ public:
 
     float radiance(const Vector3& x, const Vector3& incdir) const 
     { 
-        if (dot(incdir, m_normal) < 0)
+//        if (dot(incdir, m_normal) < 0)
             return m_wattage / (PI*m_dimensions[0]*m_dimensions[1]); 
-        else
-            return 0;
+//        else
+//            return 0;
     } 
 
     void setNormal(Vector3 n) 

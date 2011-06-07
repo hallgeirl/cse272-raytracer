@@ -60,6 +60,7 @@ int mode = 0;
 
 bool metropolis = false;
 bool bidirectional = false;
+bool photonmapping = false;
 
 #ifdef METROPOLIS
 metropolis = true;
@@ -67,6 +68,10 @@ metropolis = true;
 
 #ifdef BIDIRECTIONAL
 bidirectional = true;
+#endif
+
+#ifdef PHOTON_MAPPING
+photonmapping = true;
 #endif
 
 cout << "Mode: " << mode << endl;
