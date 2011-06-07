@@ -81,10 +81,7 @@ Scene::preCalc()
 
 inline float tonemapValue(float value, float maxIntensity)
 {
-    return pow(value, 1./2.2);
-//    return value;
-//    return sigmoid(20*value-2.5);
-    //return std::min(pow(value / maxIntensity, 0.35f)*1.1f, 1.0f);
+    return max(min(pow(value, 1./2.2), 1.), 0.);
 }
 
 void
@@ -162,7 +159,9 @@ Scene::raytraceImage(Camera *cam, Image *img)
             for (int k = 0; k < 3; k++)
             {
                 if (finalColor[k] != finalColor[k])
-                    finalColor[k] = maxIntensity;
+                {
+                    cout << "Pixel at " << j << "," << i << " is NAN!" << endl;
+                }
                 
                 finalColor[k] = tonemapValue(finalColor[k], maxIntensity);
             }
