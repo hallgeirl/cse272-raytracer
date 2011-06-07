@@ -22,19 +22,19 @@ struct Point
 	long double accFlux;
 	long double newFlux;
     float scaling;
-	bool bHit;
+	bool bLight;
     short plane;                  // splitting plane for kd-tree
 	unsigned char theta, phi;
 	int i, j;
 
 	Point()
 		:position(0.f), normal(0.f), dir(0.f), brdf(1.f), radius(0.f), accPhotons(0), newPhotons(0), accFlux(0.f), newFlux(0.f), 
-			scaling(1), bHit(false), theta(0), phi(0), i(0), j(0)
+			scaling(1), bLight(true), theta(0), phi(0), i(0), j(0)
 	{}
 
 	Point(const Vector3& inPosition, const Vector3& inNormal, const Vector3& inDir, const float inBRDF, const float inRadius)
 		:position(inPosition), normal(inNormal), dir(inDir), brdf(inBRDF), radius(inRadius), accPhotons(0), newPhotons(0), accFlux(0.f), newFlux(0.f), 
-			scaling(1), bHit(true), theta(0), phi(0), i(0), j(0)
+			scaling(1), bLight(false), theta(0), phi(0), i(0), j(0)
 	{}
 };
 
@@ -68,7 +68,7 @@ public:
     const Vector3& dir,			   // point direction
 	const float radius,			   // initial radius
 	const float brdf,			   // surface brdf
-	const bool bHit);			   // if valid point
+	const bool bLight);			   // if valid point
 
   void empty();
 
