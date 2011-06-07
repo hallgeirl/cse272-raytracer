@@ -81,7 +81,8 @@ Scene::preCalc()
 
 inline float tonemapValue(float value, float maxIntensity)
 {
-    return value;
+    return pow(value, 1./2.2);
+//    return value;
 //    return sigmoid(20*value-2.5);
     //return std::min(pow(value / maxIntensity, 0.35f)*1.1f, 1.0f);
 }
@@ -352,7 +353,7 @@ Path MutatePath(const Path& goodPath, const float MutationSize)
 																		ApplyDeltaRange(Mutate(MutationSize), phi, 0, PI/2.));
 
 	// mutate phi/theta or random numbers?
-	for (int i = 0; i < (TRACE_DEPTH_PHOTONS-1); ++i)
+	for (int i = 0; i < (TRACE_DEPTH_PHOTONS); ++i)
 	{
 		//theta = u1 (0 - 2PI), phi = u2 (0 - PI/2)
 		mutatedPath.u[i*2] = ApplyDeltaRange(Mutate(MutationSize), goodPath.u[i*2], 0.f, 2.*PI);
@@ -389,8 +390,8 @@ bool Scene::UpdateMeasurementPoints(const Vector3& pos, const Vector3& normal, c
 			continue;
         }
 
-		if(dot(hp->normal, normal) < 0.5)
-			continue;
+		if(dot(hp->normal, normal) < epsilon)
+    		continue;
 
 		float d = (pow(pos.x - hp->position.x, 2) +
 			pow(pos.y - hp->position.y, 2) +
@@ -515,7 +516,7 @@ void Scene::AdaptivePhotonPasses()
 	long mutated = 1;
 	long accepted = 0;
 
-    int Nphotons = 1000000;
+    int Nphotons = 100000;
 
 	//find starting good path
 	do
@@ -641,7 +642,7 @@ void Scene::traceProgressivePhotons()
 int Scene::tracePhoton(const Path& path, const Vector3& position, const Vector3& direction, const Vector3& power, int depth, bool bCausticRay)
 {
     PHOTON_DEBUG(endl << "tracePhoton(): pos " << position << ", dir " << direction << ", pwr " << power << ", depth " << depth);
-    if (depth > TRACE_DEPTH_PHOTONS) return 0;
+    if (depth >= TRACE_DEPTH_PHOTONS) return 0;
 
     //Create a ray to trace the scene with
     Ray ray(position+epsilon*direction, direction);

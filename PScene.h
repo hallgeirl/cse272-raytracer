@@ -18,7 +18,7 @@ struct Path
 {
 	Vector3 Origin;
 	Vector3 Direction;
-	double u[4]; 
+	double u[TRACE_DEPTH_PHOTONS*2]; 
 
 	Path(const Vector3& inOrigin, const Vector3& inDirection)
 		:Origin(inOrigin), Direction(inDirection)

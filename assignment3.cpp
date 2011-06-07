@@ -303,9 +303,9 @@ sample sampleBidirectionalPath(const path& eyepath, const path& lightpath, int w
                 Ray shadow(eyehits[j].x, l);
                 if (!g_scene->trace(hitTmp, shadow, 0, length))
                 {
-                    //               brdf(eye point)               flux                                                        
+                    //               brdf(eye point)               flux                   incid. angle to eye point   incid.angle to light point
 //                    Vector3 result = eyehits[j].contrib * weight * lighthits[i].contrib * abs(dot(l, eyehits[j].N)) * abs(dot(l, lighthits[i].N)) / (length*length);
-                    Vector3 result = eyehits[j].contrib * weight * lighthits[i].contrib * abs(dot(l, eyehits[j].N)) * abs(dot(l, lighthits[i].N)) / (length*length);
+                    Vector3 result = eyehits[j].contrib * weight * lighthits[i].contrib * abs(dot(l, eyehits[j].N)) * abs(dot(l, lighthits[i].N)) / (eyehits[j].x-lighthits[i].x).length2();
                     if (i > 0)
                         result *= lighthits[i].reflectance/PI;
 
@@ -821,7 +821,7 @@ void a3hacker1()
         {
             msq = 0;
             bool writeImage = false;
-            if (i == 100000 || i == 1000000 || i == 10000000 || i % 100000000 == 0)
+            if (i == 100000 || i == 1000000 || i % 10000000 == 0 || i == 100000000)
                 writeImage = true;
 
             for (int y = 0; y < H; y++)

@@ -70,9 +70,9 @@ metropolis = true;
 bidirectional = true;
 #endif
 
-#ifdef PHOTON_MAPPING
-photonmapping = true;
-#endif
+//#ifdef PHOTON_MAPPING
+//photonmapping = true;
+//#endif
 
 cout << "Mode: " << mode << endl;
 
