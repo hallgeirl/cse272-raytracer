@@ -21,6 +21,7 @@ struct hit_point
     Vector3 x;
     Vector3 contrib;
     Vector3 N;
+    Vector3 reflectance;  //reflectance at this point
 
     hit_point() : contrib(0), x(0), N(0)
     {}

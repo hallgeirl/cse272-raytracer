@@ -145,20 +145,21 @@ sample sampleBidirectionalPath(const path& eyepath, const path& lightpath, int w
     int light_depth = LIGHT_PATH_LENGTH;
     int pathpos = 4; //next random number to be used is at index 4 (light path)
 
-
     HitInfo hitInfo;
     PointLight* l;
-//    Vector3 contribution(1./PI,1./PI,1./PI); //Current contribution
-    Vector3 contribution(1); //Current contribution
+    Vector3 contribution(1./PI); //Current contribution from an eye point
+//    Vector3 contribution(1); //Current contribution from an eye point
 
     int light_points = 0;   //Number of hit points for the light path
     int eye_points = 0; //Number of hit points for the eye path
     hit_point lighthits[LIGHT_PATH_LENGTH+1]; //Hit points for light path (there is one hit point at the lightsource itself, so +1)
     hit_point eyehits[EYE_PATH_LENGTH];       //Hit points for the eye path
-    Vector3 flux(g_l->wattage()/g_l->area());
+//    Vector3 flux(g_l->wattage()/g_l->area());
+    Vector3 flux(g_l->wattage());
 
     //First point is at the light source
     lighthits[0].x = light_ray.o;
+    lighthits[0].N = g_l->getNormal();
     lighthits[0].contrib = flux;
     light_points = 1;
     
@@ -201,6 +202,7 @@ sample sampleBidirectionalPath(const path& eyepath, const path& lightpath, int w
                     lighthits[light_points].x = hitInfo.P;
                     lighthits[light_points].contrib = flux;
                     lighthits[light_points].N = hitInfo.N;
+                    lighthits[light_points].reflectance = hitInfo.material->getDiffuse();
                     light_points++;
                     flux = flux * hitInfo.material->getDiffuse();
                 }
@@ -209,7 +211,6 @@ sample sampleBidirectionalPath(const path& eyepath, const path& lightpath, int w
                     //Hit on wrong side of the geometry, so terminate ray
                     light_depth = -1;
                 }
-
             }
             light_depth--;
         }
@@ -302,14 +303,21 @@ sample sampleBidirectionalPath(const path& eyepath, const path& lightpath, int w
                 Ray shadow(eyehits[j].x, l);
                 if (!g_scene->trace(hitTmp, shadow, 0, length))
                 {
-                    out.value += eyehits[j].contrib*weight*lighthits[i].contrib*abs(dot(l, eyehits[j].N));
+                    //               brdf(eye point)               flux                                                        
+//                    Vector3 result = eyehits[j].contrib * weight * lighthits[i].contrib * abs(dot(l, eyehits[j].N)) * abs(dot(l, lighthits[i].N)) / (length*length);
+                    Vector3 result = eyehits[j].contrib * weight * lighthits[i].contrib * abs(dot(l, eyehits[j].N)) * abs(dot(l, lighthits[i].N)) / (length*length);
+                    if (i > 0)
+                        result *= lighthits[i].reflectance/PI;
+
+                    out.value += result;
                 }
             }
         }
     }
     else
     {
-        out.value = contribution*g_l->radiance(Vector3(0),Vector3(0,-1,0));
+//        out.value = contribution*g_l->radiance(Vector3(0),Vector3(0,-1,0))*PI*PI*1.2;
+        out.value = Vector3(0);
     }
 
     return out;
@@ -718,29 +726,36 @@ void a3hacker1()
 
     double direct_b = 0;
     //Explore L-S*-E paths
-//    for (int y = 0; y < H; y++)
-//    {
-//        for (int x = 0; x < W; x++)
-//        {
-//            HitInfo hitInfo;
-//            Ray ray = g_camera->eyeRay(x, y, W, H, false);
-//            int depth = PATH_LENGTH;
-//            while (depth > 0)
-//            if (g_scene->trace(hitInfo, ray, 0, MIRO_TMAX))
-//            {
-//                PointLight *l = dynamic_cast<PointLight*>(hitInfo.object);
-//                if (l != 0)
-//                {
-//                    direct_img[x][y] = l->radiance(hitInfo.P, ray.d);
-//                    direct_b += direct_img[x][y].average();
-//                }
-//                else if (hitInfo.material->isReflective())
-//                {
-//                    
-//                }
-//            }
-//        }
-//    }
+    cout << "Computing direct Eye-Light hits.." << endl;
+    for (int y = 0; y < H; y++)
+    {
+        for (int x = 0; x < W; x++)
+        {
+            HitInfo hitInfo;
+            Ray ray = g_camera->eyeRay(x, y, W, H, false);
+            int depth = PATH_LENGTH;
+            Vector3 contrib = Vector3(1);
+            while (depth > 0)
+            {
+                if (g_scene->trace(hitInfo, ray, 0, MIRO_TMAX))
+                {
+                    PointLight *l = dynamic_cast<PointLight*>(hitInfo.object);
+                    if (l != 0)
+                    {
+                        direct_img[x][y] = l->radiance(hitInfo.P, ray.d)*contrib;
+                        depth = -1;
+                    }
+                    else if (hitInfo.material->isReflective())
+                    {
+                        ray = ray.reflect(hitInfo);
+                        contrib = contrib*hitInfo.material->getReflection();
+                    }
+                }
+                depth--;
+            }
+            direct_b += direct_img[x][y].average();
+        }
+    }
     direct_b /= (double)(W*H);
 
     //Generate path seeds
@@ -759,7 +774,7 @@ void a3hacker1()
             b += I*PI;
 
             //is it a better path?
-            if (p_init_eye.I < I && !s.direct)
+            if (p_init_eye.I < I)
             {
                 path_copy(p_init_eye, p_tmp_eye);
                 path_copy(p_init_light, p_tmp_light);
@@ -806,7 +821,7 @@ void a3hacker1()
         {
             msq = 0;
             bool writeImage = false;
-            if (i == 100000 || i == 1000000 || i == 10000000 || i == 100000000)
+            if (i == 100000 || i == 1000000 || i == 10000000 || i % 100000000 == 0)
                 writeImage = true;
 
             for (int y = 0; y < H; y++)
