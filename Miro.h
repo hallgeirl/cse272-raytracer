@@ -24,6 +24,7 @@ const float PHOTON_ALPHA = 0.7f;
 const float DOF_APERTURE = .20f;
 const float DOF_FOCUS_PLANE = 15.3f;
 const float SURFACE_SAMPLES = 1e-4f;
+const float INITIAL_RADIUS = 0.01;
 //const float DOF_FOCUS_PLANE = 25.23f;
 
 

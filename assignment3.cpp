@@ -97,11 +97,12 @@ makeTask3Scene()
     
 //    double e = 0.0005;
     double e = 0.;
+    Phong* gray = new Phong(Vector3(0.75));
 	// Floor
-	BuildSquare(Vector3(-1,-1,-1), Vector3(1,-1,1), Vector3(0,1,0), new Phong(Vector3(0.75)));
+	BuildSquare(Vector3(-1,-1,-1), Vector3(1,-1,1), Vector3(0,1,0), gray);
 	
 	// Back Wall
-	BuildSquare(Vector3(-1,-1,1), Vector3(1,1,1), Vector3(0,0,-1), new Phong(Vector3(0.75)));
+	BuildSquare(Vector3(-1,-1,1), Vector3(1,1,1), Vector3(0,0,-1), gray);
 
 
 	// Left Wall
@@ -111,11 +112,11 @@ makeTask3Scene()
 	BuildSquare(Vector3(1+e,-1,-1), Vector3(1-e,1,1), Vector3(-1,0,0), new Phong(Vector3(0.75,0,0)));
 #else
 	// Right Wall
-	BuildSquare(Vector3(1+e,-1,-1), Vector3(1-e,1,1), Vector3(-1,0,0), new Phong(Vector3(0.75)));
+	BuildSquare(Vector3(1+e,-1,-1), Vector3(1-e,1,1), Vector3(-1,0,0), gray);
 #endif
 //	// Ceiling
-	BuildSquare(Vector3(0.05,1,-1), Vector3(1,1,1), Vector3(0,-1,0), new Phong(0.75));
-	BuildSquare(Vector3(-0.95,1,-1), Vector3(0,1,1), Vector3(0,-1,0), new Phong(0.75));
+	BuildSquare(Vector3(0.05,1,-1), Vector3(1,1,1), Vector3(0,-1,0), gray);
+	BuildSquare(Vector3(-0.95,1,-1), Vector3(0,1,1), Vector3(0,-1,0), gray);
 
     //Hackerpoint: Sphere
 #ifdef HACKER2
@@ -154,7 +155,6 @@ sample sampleBidirectionalPath(const path& eyepath, const path& lightpath, int w
     int eye_points = 0; //Number of hit points for the eye path
     hit_point lighthits[LIGHT_PATH_LENGTH+1]; //Hit points for light path (there is one hit point at the lightsource itself, so +1)
     hit_point eyehits[EYE_PATH_LENGTH];       //Hit points for the eye path
-//    Vector3 flux(g_l->wattage()/g_l->area());
     Vector3 flux(g_l->wattage());
 
     //First point is at the light source
@@ -301,7 +301,7 @@ sample sampleBidirectionalPath(const path& eyepath, const path& lightpath, int w
                 weight = 1./(double)(pathcount[i+j+1]);
                 l /= length;
                 Ray shadow(eyehits[j].x, l);
-                if (!g_scene->trace(hitTmp, shadow, 0, length))
+                if (!g_scene->trace(hitTmp, shadow, 0, length-epsilon))
                 {
                     //               brdf(eye point)               flux                   incid. angle to eye point   incid.angle to light point
 //                    Vector3 result = eyehits[j].contrib * weight * lighthits[i].contrib * abs(dot(l, eyehits[j].N)) * abs(dot(l, lighthits[i].N)) / (length*length);
@@ -316,7 +316,7 @@ sample sampleBidirectionalPath(const path& eyepath, const path& lightpath, int w
     }
     else
     {
-//        out.value = contribution*g_l->radiance(Vector3(0),Vector3(0,-1,0))*PI*PI*1.2;
+//        out.value = contribution*g_l->radiance(Vector3(0),Vector3(0,-1,0));
         out.value = Vector3(0);
     }
 

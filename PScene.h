@@ -117,7 +117,7 @@ public:
 
 	void UpdatePhotonStats();
 	void PrintPhotonStats();
-	void RenderPhotonStats(Vector3 *tempImage, const int width, const int height, float minIntensity, float maxIntensity);
+	void RenderPhotonStats(Vector3 *tempImage, const int width, const int height, float& minIntensity, float& maxIntensity);
 	bool SamplePhotonPath(const Path& path, const Vector3& power);
 	bool UpdateMeasurementPoints(const Vector3& pos, const Vector3& normal, const Vector3& power);
     void traceProgressivePhotons();

@@ -81,7 +81,7 @@ Scene::preCalc()
 
 inline float tonemapValue(float value, float maxIntensity)
 {
-    return max(min(pow(value, 1./2.2), 1.), 0.);
+    return max(min(pow(value, (float)1./2.2), 1.), 0.);
 }
 
 void
@@ -162,7 +162,6 @@ Scene::raytraceImage(Camera *cam, Image *img)
                 {
                     cout << "Pixel at " << j << "," << i << " is NAN!" << endl;
                 }
-                
                 finalColor[k] = tonemapValue(finalColor[k], maxIntensity);
             }
             img->setPixel(j, i, finalColor);
@@ -259,7 +258,7 @@ bool Scene::traceScene(const Ray& ray, Vector3& shadeResult, int depth)
 			//if diffuse material, send trace with RandomRay generate by Monte Carlo
 			if (hitInfo.material->isDiffuse())
 			{
-				g_scene->addPoint(hitInfo.P, hitInfo.N, ray.d, hitInfo.material->getDiffuse()[0]/PI, 0.25f, true);
+				g_scene->addPoint(hitInfo.P, hitInfo.N, ray.d, hitInfo.material->getDiffuse()[0]/PI, INITIAL_RADIUS, true);
 
 				bModified = true;
 			}
@@ -374,7 +373,7 @@ bool Scene::UpdateMeasurementPoints(const Vector3& pos, const Vector3& normal, c
 
     np.dist2 = new float[npoints+1];
     np.index = new Point*[npoints+1];
-	m_pointMap.find_points(&np, pos, normal, 0.25, npoints);
+	m_pointMap.find_points(&np, pos, normal, INITIAL_RADIUS, npoints);
 
 	for (int i=1; i<=np.found; i++) {
 		Point *hp = np.index[i];
@@ -421,6 +420,10 @@ void Scene::UpdatePhotonStats()
 		if (!hp->bHit)
 			continue;
 
+		// continue if no new photons have been added
+		if(hp->newPhotons == 0)
+			continue;
+
         double f_alpha = (long double)hp->accPhotons*5e-6;
 
         float alpha = PHOTON_ALPHA + (1.-PHOTON_ALPHA)*(1.-exp(-f_alpha));
@@ -438,7 +441,8 @@ void Scene::UpdatePhotonStats()
 		hp->accPhotons += (int)(alpha * hp->newPhotons);
 		
 		// not sure about this flux acc, or about calculating the irradiance
-		hp->accFlux = ( hp->accFlux + hp->newFlux/hp->scaling) * delta;	
+		hp->accFlux = ( hp->accFlux + hp->newFlux) * delta;	
+		//hp->accFlux = ( hp->accFlux + hp->newFlux/hp->scaling) * delta;	
 
         //cout << hp->accFlux << "\t" << hp->accPhotons << "\t" << hp->radius << "\n";
 
@@ -462,10 +466,8 @@ void Scene::PrintPhotonStats()
 	}
 }
 
-void Scene::RenderPhotonStats(Vector3 *tempImage, const int width, const int height, float minIntensity, float maxIntensity)
+void Scene::RenderPhotonStats(Vector3 *tempImage, const int width, const int height, float& minIntensity, float& maxIntensity)
 {
-	float localMaxIntensity = -infinity, localMinIntensity = infinity;
-
 	int n;
 	for (n = 0; n <  m_Points.size(); ++n)
 	{
@@ -477,6 +479,12 @@ void Scene::RenderPhotonStats(Vector3 *tempImage, const int width, const int hei
 			continue;
 		}
 
+		if (hp->accFlux < epsilon)
+		{
+			tempImage[hp->i*width+hp->j] = 0.f;
+			continue;
+		}
+
 		long double A = PI * pow(hp->radius, 2);
 
 		long double result = hp->accFlux / A / (long double)m_photonsEmitted * ((long double)m_photonsUniform / (long double)m_photonsEmitted);
@@ -485,6 +493,7 @@ void Scene::RenderPhotonStats(Vector3 *tempImage, const int width, const int hei
 
 		if (tempImage[hp->i*width+hp->j].x < minIntensity) minIntensity = tempImage[hp->i*width+hp->j].x;
         if (tempImage[hp->i*width+hp->j].x > maxIntensity) maxIntensity = tempImage[hp->i*width+hp->j].x;
+
 	}
 	if (n != (width*height))
 		debug("Measurement points do not equal image dimensions");
@@ -689,7 +698,7 @@ int Scene::tracePhoton(const Path& path, const Vector3& position, const Vector3&
 				nPhotons++;
             }
 
-#                   ifdef VISUALIZE_PHOTON_MAP
+#               ifdef VISUALIZE_PHOTON_MAP
                 Sphere* sp = new Sphere;
                 sp->setCenter(hit.P); sp->setRadius(0.02f);
                 Vector3 ref = power; //Use the normalized power as the reflectance for visualization.
