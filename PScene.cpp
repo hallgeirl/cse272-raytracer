@@ -1,3 +1,5 @@
+#ifdef PHOTON_MAPPING
+
 #include "Utility.h"
 #include <cmath>
 #include <iostream>
@@ -149,9 +151,6 @@ Scene::raytraceImage(Camera *cam, Image *img)
 
     debug("Performing tone mapping...");
 
-    #ifdef OPENMP
-    #pragma omp parallel for
-    #endif
     for (int i = 0; i < height; ++i)
     {
         for (int j = 0; j < width; ++j)
@@ -508,7 +507,7 @@ void Scene::AdaptivePhotonPasses()
 	long mutated = 1;
 	long accepted = 0;
 
-    int Nphotons = 100000;
+    int Nphotons = 1000000;
 
 	//find starting good path
 	do
@@ -520,7 +519,7 @@ void Scene::AdaptivePhotonPasses()
     long double msq = 0;
 	for (m_photonsEmitted = 0; m_photonsEmitted < Nphotons; m_photonsEmitted++)
     {
-		if (m_photonsEmitted > 0 && m_photonsEmitted % 100000 == 0)
+		if (m_photonsEmitted > 0 && m_photonsEmitted % 1000000 == 0)
 		{
 			UpdatePhotonStats();
 		}
@@ -770,3 +769,4 @@ Scene::getEnvironmentMap(const Ray & ray)
 	}
 	return envResult;
 }
+#endif

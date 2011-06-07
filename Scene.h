@@ -1,3 +1,4 @@
+#ifndef PHOTON_MAPPING
 #ifndef CSE168_SCENE_H_INCLUDED
 #define CSE168_SCENE_H_INCLUDED
 
@@ -75,3 +76,4 @@ protected:
 extern Scene * g_scene;
 
 #endif // CSE168_SCENE_H_INCLUDED
+#endif

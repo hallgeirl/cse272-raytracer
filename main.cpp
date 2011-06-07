@@ -59,8 +59,19 @@ int mode = 0;
 #endif
 
 bool metropolis = false;
+bool bidirectional = false;
+bool photonmapping = false;
+
 #ifdef METROPOLIS
 metropolis = true;
+#endif
+
+#ifdef BIDIRECTIONAL
+bidirectional = true;
+#endif
+
+#ifdef PHOTON_MAPPING
+photonmapping = true;
 #endif
 
 cout << "Mode: " << mode << endl;
@@ -78,10 +89,13 @@ else if (mode == 1)
     //A1makeTeapotScene();
     cout << "Rendering without display" << endl;
     g_camera->setRenderer(Camera::RENDER_RAYTRACE);
-    if (!metropolis)
-        g_camera->click(g_scene, g_image);
-    else
+    if (bidirectional)
+        a3hacker1();
+    else if(metropolis)
         a3task3();
+    else
+        g_camera->click(g_scene, g_image);
+
     g_image->writePPM();
 }
 else

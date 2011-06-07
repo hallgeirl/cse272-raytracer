@@ -1,3 +1,5 @@
+#ifdef PHOTON_MAPPING
+
 #ifndef CSE168_PSCENE_H_INCLUDED
 #define CSE168_PSCENE_H_INCLUDED
 
@@ -145,7 +147,7 @@ protected:
 
     static const int MaxLights = 10;
 
-    static const int PhotonsPerLightSource = 100000;
+    static const int PhotonsPerLightSource = 1000000;
     static const int CausticPhotonsPerLightSource = 100000;
 
 	long int m_photonsEmitted;
@@ -155,3 +157,4 @@ protected:
 extern Scene * g_scene;
 
 #endif // CSE168_SCENE_H_INCLUDED
+#endif
