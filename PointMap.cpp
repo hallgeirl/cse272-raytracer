@@ -206,6 +206,7 @@ Point* Point_map :: store(
         const bool bHit)			   
 //***************************
 {
+<<<<<<< HEAD
     if (stored_points>=max_points)
         return NULL;
 
@@ -258,6 +259,60 @@ Point* Point_map :: store(
         node->phi = (unsigned char)phi;
 
     return node;
+=======
+  if (stored_points>=max_points)
+    return NULL;
+
+  if (!bHit)
+	  printf("Invalid point created in point map");
+
+  stored_points++;
+  //Point *const node = &points[stored_points];
+  Point *node = &points[stored_points];
+
+  node->position = pos;
+  node->normal = normal;
+  node->dir = dir;
+  node->radius = radius;
+  node->brdf = brdf;
+  node->bHit = bHit;
+  node->accFlux = 0.f;
+  node->accPhotons = 0;
+  node->newFlux = 0.f;
+  node->newPhotons = 0;
+  node->scaling = 1.f;
+
+	if (node->position.x < bbox_min.x)
+	  bbox_min.x = node->position.x;
+	if (node->position.x > bbox_max.x)
+	  bbox_max.x = node->position.x;
+
+	if (node->position.y < bbox_min.y)
+	  bbox_min.y = node->position.y;
+	if (node->position.y > bbox_max.y)
+	  bbox_max.y = node->position.y;
+
+	if (node->position.z < bbox_min.z)
+	  bbox_min.z = node->position.z;
+	if (node->position.z > bbox_max.z)
+	  bbox_max.z = node->position.z;
+	
+	int theta = int( acos(dir.z)*(256.0/M_PI) );
+  if (theta>255)
+    node->theta = 255;
+  else
+   node->theta = (unsigned char)theta;
+
+  int phi = int( atan2(dir.y,dir.x)*(256.0/(2.0*M_PI)) );
+  if (phi>255)
+    node->phi = 255;
+  else if (phi<0)
+    node->phi = (unsigned char)(phi+256);
+  else
+    node->phi = (unsigned char)phi;
+
+  return node;
+>>>>>>> dcc4943b356725f284a43000efa257b00d49f30c
 }
 
 /* empty the  flat array 
