@@ -203,13 +203,13 @@ Point* Point_map :: store(
         const Vector3& dir,			   
         const float radius,			   
         const float brdf,
-        const bool bHit)			   
+        const bool bLight)			   
 //***************************
 {
   if (stored_points>=max_points)
     return NULL;
 
-  if (!bHit)
+  if (bLight)
 	  printf("Invalid point created in point map");
 
   stored_points++;
@@ -221,7 +221,7 @@ Point* Point_map :: store(
   node->dir = dir;
   node->radius = radius;
   node->brdf = brdf;
-  node->bHit = bHit;
+  node->bLight = bLight;
   node->accFlux = 0.f;
   node->accPhotons = 0;
   node->newFlux = 0.f;

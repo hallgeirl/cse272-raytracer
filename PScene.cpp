@@ -81,16 +81,15 @@ Scene::preCalc()
 
 }
 
-inline float tonemapValue(float value, float maxIntensity)
+inline float tonemapValue(float value)
 {
-    return max(min(pow(value, (float)1./2.2), 1.), 0.);
+    return max(min(pow((double)value, 1./2.2), 1.), 0.);
 }
 
 void
 Scene::raytraceImage(Camera *cam, Image *img)
 {
 	int depth = TRACE_DEPTH;
-    float minIntensity = infinity, maxIntensity = -infinity;
 
     printf("Rendering Progress: %.3f%%\r", 0.0f);
     fflush(stdout);
@@ -132,9 +131,8 @@ Scene::raytraceImage(Camera *cam, Image *img)
         }
     }
 
-	if (m_Points.size() != (width*height))
-		debug("uhohs\n");
-
+	//if (m_Points.size() != (width*height))
+	//	debug("uhohs\n");
     t1 += getTime();
     debug("Performing Adaptive passes...");
 	m_pointMap.balance();
@@ -148,7 +146,7 @@ Scene::raytraceImage(Camera *cam, Image *img)
     m_bvh.build(&m_objects);
     #endif
 
-	RenderPhotonStats(tempImage, width, height, minIntensity, maxIntensity);
+	RenderPhotonStats(tempImage, width, height);
 
     debug("Performing tone mapping...");
 
@@ -165,7 +163,7 @@ Scene::raytraceImage(Camera *cam, Image *img)
                 {
                     cout << "Pixel at " << j << "," << i << " is NAN!" << endl;
                 }
-                finalColor[k] = tonemapValue(finalColor[k], maxIntensity);
+                finalColor[k] = tonemapValue(finalColor[k]);
             }
             img->setPixel(j, i, finalColor);
         }
@@ -261,7 +259,7 @@ bool Scene::traceScene(const Ray& ray, Vector3& shadeResult, int depth)
 			//if diffuse material, send trace with RandomRay generate by Monte Carlo
 			if (hitInfo.material->isDiffuse())
 			{
-				g_scene->addPoint(hitInfo.P, hitInfo.N, ray.d, hitInfo.material->getDiffuse()[0]/PI, INITIAL_RADIUS, true);
+				g_scene->addPoint(hitInfo.P, hitInfo.N, ray.d, hitInfo.material->getDiffuse()[0]/PI, INITIAL_RADIUS, false);
 
 				bModified = true;
 			}
@@ -305,8 +303,8 @@ bool Scene::traceScene(const Ray& ray, Vector3& shadeResult, int depth)
 			}
 			if (!bModified)
 			{
-				//this means we hit an emissive material, so create a default measurement point
-				g_scene->addPoint(Vector3(0.f), Vector3(0.f), Vector3(0.f), 0.f, 0.f, false);
+				//this means we hit an emissive material (light), so create a default measurement point
+				g_scene->addPoint(Vector3(0.f), Vector3(0.f), Vector3(0.f), 0.f, 0.f, true);
 			}
 		}
 		else
@@ -317,7 +315,6 @@ bool Scene::traceScene(const Ray& ray, Vector3& shadeResult, int depth)
                 hit = true;
             }
             else hit = false;
-			g_scene->addPoint(Vector3(0.f), Vector3(0.f), Vector3(0.f), 0.f, 0.f, false);
 		}
 	}
     
@@ -387,7 +384,7 @@ bool Scene::UpdateMeasurementPoints(const Vector3& pos, const Vector3& normal, c
 		Point *hp = m_Points[n];*/
 
 		// skip the measurement points that did not hit a surface
-		if (!hp->bHit)
+		if (hp->bLight)
         {
 			continue;
         }
@@ -403,7 +400,9 @@ bool Scene::UpdateMeasurementPoints(const Vector3& pos, const Vector3& normal, c
 		{
 			//wait to update radius and flux * BRDF
 			hp->newPhotons++;
+			hp->newFlux += power.x;
 			hp->newFlux += power.x * hp->brdf;
+            cout << power.x << "\t" << hp->newFlux << "\t" << hp->brdf << "\n";
 
 			// can hit multiple measurement points	
 			hit = true;
@@ -417,11 +416,10 @@ bool Scene::UpdateMeasurementPoints(const Vector3& pos, const Vector3& normal, c
 
 void Scene::UpdatePhotonStats()
 {
-    cout << "Photon Stats:" << endl;
 	for (int n = 0; n < m_Points.size(); ++n)
 	{
 		Point *hp = m_Points[n];
-		if (!hp->bHit)
+		if (hp->bLight)
 			continue;
 
 		// continue if no new photons have been added
@@ -470,16 +468,25 @@ void Scene::PrintPhotonStats()
 	}
 }
 
-void Scene::RenderPhotonStats(Vector3 *tempImage, const int width, const int height, float& minIntensity, float& maxIntensity)
+void Scene::RenderPhotonStats(Vector3 *tempImage, const int width, const int height)
 {
+	// initialize for now
+    for (int i = 0; i < height; ++i)
+    {
+        for (int j = 0; j < width; ++j)
+		{
+			tempImage[i*width+j] = 0.f;
+		}
+	}
+
 	int n;
 	for (n = 0; n <  m_Points.size(); ++n)
 	{
 		Point *hp = m_Points[n];
 
-		if (!hp->bHit)
+		if (hp->bLight)
 		{
-			tempImage[hp->i*width+hp->j] = m_bgColor;
+			tempImage[hp->i*width+hp->j] = 1.0f;
 			continue;
 		}
 
@@ -495,21 +502,9 @@ void Scene::RenderPhotonStats(Vector3 *tempImage, const int width, const int hei
 //		long double result = (hp->position.y+1.)/2.;
 
 		tempImage[hp->i*width+hp->j] = Vector3(result);
-
-		if (tempImage[hp->i*width+hp->j].x < minIntensity) minIntensity = tempImage[hp->i*width+hp->j].x;
-        if (tempImage[hp->i*width+hp->j].x > maxIntensity) maxIntensity = tempImage[hp->i*width+hp->j].x;
-
 	}
-	if (n != (width*height))
-		debug("Measurement points do not equal image dimensions");
-
-	/*for (int k = 0; k < 3; k++)
-    {
-        if (shadeResult[k] > localMaxIntensity)
-            localMaxIntensity = shadeResult[k];
-        if (shadeResult[k] < localMinIntensity)
-            localMinIntensity = shadeResult[k];
-    }*/
+	//if (n != (width*height))
+	//	debug("Measurement points do not equal image dimensions");
 }
 
 
@@ -529,7 +524,7 @@ void Scene::AdaptivePhotonPasses()
 	long mutated = 1;
 	long accepted = 0;
 
-    int Nphotons = 1000000;
+    int Nphotons = 100000;
 
 	//find starting good path
 	do
@@ -542,7 +537,7 @@ void Scene::AdaptivePhotonPasses()
     long double msq = 0;
 	for (m_photonsEmitted = 0; m_photonsEmitted < Nphotons; m_photonsEmitted++)
     {
-		if (m_photonsEmitted > 0 && m_photonsEmitted % 1000000 == 0)
+		if (m_photonsEmitted > 0 && m_photonsEmitted % 100 == 0)
 		{
 			UpdatePhotonStats();
 		}

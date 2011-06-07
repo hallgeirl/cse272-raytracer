@@ -40,30 +40,6 @@ struct Path
 	}
 };
 
-/*struct Point
-{
-	Vector3 position;
-	Vector3 normal;
-	Vector3 dir;
-	float brdf;
-	//float pixel_wgt;
-	double radius;
-	int accPhotons;
-	int newPhotons;
-	long double accFlux;
-	long double newFlux;
-    float scaling;
-	bool bHit;
-
-	Point()
-		:position(0.f), normal(0.f), dir(0.f), brdf(1.f), radius(0.f), accPhotons(0), newPhotons(0), accFlux(0.f), newFlux(0.f), scaling(1), bHit(false)
-	{}
-
-		Point(const Vector3& inPosition, const Vector3& inNormal, const Vector3& inDir, const float inBRDF, const float inRadius)
-		:position(inPosition), normal(inNormal), dir(inDir), brdf(inBRDF), radius(inRadius), accPhotons(0), newPhotons(0), accFlux(0.f), newFlux(0.f), scaling(1), bHit(true)
-	{}
-};*/
-
 typedef std::vector<Point*> Points;
 
 class Scene
@@ -85,21 +61,16 @@ public:
     void addLight(PointLight* pObj)     {m_lights.push_back(pObj);}
     const Lights* lights() const        {return &m_lights;}
 
-	void addPoint(const Vector3& inPosition, const Vector3& inNormal, const Vector3& inDir, const float inBRDF, const float inRadius, const bool inbHit)
+	void addPoint(const Vector3& inPosition, const Vector3& inNormal, const Vector3& inDir, const float inBRDF, const float inRadius, const bool inbLight)	
 	{
-		if (inbHit)
+		if (!inbLight)
 		{
-			Point* hp = m_pointMap.store(inPosition, inNormal, inDir, inRadius, inBRDF, inbHit);
+			Point* hp = m_pointMap.store(inPosition, inNormal, inDir, inRadius, inBRDF, inbLight);
 			if (hp != NULL)
 				m_Points.push_back(hp);
-			else 
-				m_Points.push_back(new Point());
-
-//			m_Points.push_back(new Point(inPosition, inNormal, inDir, inBRDF, inRadius));
 		}
-		else
+		else 
 			m_Points.push_back(new Point());
-
 	}
 	//const Points* Points() const	{return &m_Points;}
 
@@ -117,7 +88,7 @@ public:
 
 	void UpdatePhotonStats();
 	void PrintPhotonStats();
-	void RenderPhotonStats(Vector3 *tempImage, const int width, const int height, float& minIntensity, float& maxIntensity);
+	void RenderPhotonStats(Vector3 *tempImage, const int width, const int height);
 	bool SamplePhotonPath(const Path& path, const Vector3& power);
 	bool UpdateMeasurementPoints(const Vector3& pos, const Vector3& normal, const Vector3& power);
     void traceProgressivePhotons();
