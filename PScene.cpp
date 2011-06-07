@@ -368,13 +368,13 @@ Path MutatePath(const Path& goodPath, const float MutationSize)
 bool Scene::UpdateMeasurementPoints(const Vector3& pos, const Vector3& normal, const Vector3& power)
 {
 	bool hit = false;
-    const int npoints = 100;
+    const int npoints = W*H;
 
 	NearestPoints np;
 
     np.dist2 = new float[npoints+1];
     np.index = new Point*[npoints+1];
-	m_pointMap.find_points(&np, pos, normal, 0.25, 100);
+	m_pointMap.find_points(&np, pos, normal, 0.25, npoints);
 
 	for (int i=1; i<=np.found; i++) {
 		Point *hp = np.index[i];
@@ -396,10 +396,8 @@ bool Scene::UpdateMeasurementPoints(const Vector3& pos, const Vector3& normal, c
 			pow(pos.y - hp->position.y, 2) +
 			pow(pos.z - hp->position.z, 2));
 
-        cout << d  << " " << hp->radius << endl;
 		if (d <= hp->radius*hp->radius)
 		{
-            cout << "BLABLABLBALBAL" << endl;
 			//wait to update radius and flux * BRDF
 			hp->newPhotons++;
 			hp->newFlux += power.x * hp->brdf;

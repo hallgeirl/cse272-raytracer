@@ -5,6 +5,10 @@
 #define NO_GFX
 #endif
 
+
+#define W 512
+#define H 512
+
 const float MIRO_TMAX = 1e12f;
 const float epsilon   = 1e-4f;
 const float PI = 3.1415926535897932384626433832795028841972f;

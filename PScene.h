@@ -70,7 +70,7 @@ class Scene
 {
 public:
 	Scene() 
-		: m_photonMap(PhotonsPerLightSource*TRACE_DEPTH*MaxLights+MaxLights*10000), m_causticMap(CausticPhotonsPerLightSource*TRACE_DEPTH*MaxLights+MaxLights*10000), m_pointMap(128*128), m_environment(0), m_bgColor(Vector3(0.0f)), m_photonsEmitted(0), m_photonsUniform(0)
+		: m_photonMap(PhotonsPerLightSource*TRACE_DEPTH*MaxLights+MaxLights*10000), m_causticMap(CausticPhotonsPerLightSource*TRACE_DEPTH*MaxLights+MaxLights*10000), m_pointMap(W*H), m_environment(0), m_bgColor(Vector3(0.0f)), m_photonsEmitted(0), m_photonsUniform(0)
 	{}
 	// TODO: need right image dimensions
     void addObject(Object* pObj)        
@@ -147,8 +147,8 @@ protected:
 
     static const int MaxLights = 10;
 
-    static const int PhotonsPerLightSource = 1000000;
-    static const int CausticPhotonsPerLightSource = 100000;
+    static const int PhotonsPerLightSource = 1;
+    static const int CausticPhotonsPerLightSource = 1;
 
 	long int m_photonsEmitted;
 	long int m_photonsUniform;

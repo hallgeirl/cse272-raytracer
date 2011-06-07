@@ -4,6 +4,7 @@
 #include <cstring>
 #include "Material.h"
 #include "Utility.h"
+#include "Miro.h"
 
 void makeTask3Scene();
 void a3task1();
@@ -11,9 +12,6 @@ void a3task2();
 void a3task3();
 void a3hacker1();
 void BuildSquare(const Vector3& min, const Vector3& max, const Vector3& normal, const Material* mat);
-
-#define W 128
-#define H 128
 
 //for bidirectional path tracing
 struct hit_point
