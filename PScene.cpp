@@ -368,10 +368,13 @@ Path MutatePath(const Path& goodPath, const float MutationSize)
 bool Scene::UpdateMeasurementPoints(const Vector3& pos, const Vector3& normal, const Vector3& power)
 {
 	bool hit = false;
+    const int npoints = 100;
 
 	NearestPoints np;
 
-	m_pointMap.find_points(&np, pos, normal, 0.5, 100);
+    np.dist2 = new float[npoints+1];
+    np.index = new Point*[npoints+1];
+	m_pointMap.find_points(&np, pos, normal, 0.25, 100);
 
 	for (int i=1; i<=np.found; i++) {
 		Point *hp = np.index[i];
@@ -382,7 +385,9 @@ bool Scene::UpdateMeasurementPoints(const Vector3& pos, const Vector3& normal, c
 
 		// skip the measurement points that did not hit a surface
 		if (!hp->bHit)
+        {
 			continue;
+        }
 
 		if(dot(hp->normal, normal) < 0.5)
 			continue;
@@ -391,8 +396,10 @@ bool Scene::UpdateMeasurementPoints(const Vector3& pos, const Vector3& normal, c
 			pow(pos.y - hp->position.y, 2) +
 			pow(pos.z - hp->position.z, 2));
 
+        cout << d  << " " << hp->radius << endl;
 		if (d <= hp->radius*hp->radius)
 		{
+            cout << "BLABLABLBALBAL" << endl;
 			//wait to update radius and flux * BRDF
 			hp->newPhotons++;
 			hp->newFlux += power.x * hp->brdf;
@@ -401,6 +408,9 @@ bool Scene::UpdateMeasurementPoints(const Vector3& pos, const Vector3& normal, c
 			hit = true;
 		}
 	}
+    delete[] np.dist2;
+    delete[] np.index;
+
 	return hit;
 }
 
@@ -515,6 +525,7 @@ void Scene::AdaptivePhotonPasses()
         goodPath.Origin = light->samplePhotonOrigin();
         goodPath.Direction = light->samplePhotonDirection();
 	} while (!SamplePhotonPath(goodPath, power));
+
 
     long double msq = 0;
 	for (m_photonsEmitted = 0; m_photonsEmitted < Nphotons; m_photonsEmitted++)
@@ -676,7 +687,9 @@ int Scene::tracePhoton(const Path& path, const Vector3& position, const Vector3&
             //Diffuse, but store direct lighting for progressive mapping
 			// only increment photons stored if hit a measurement point
 			if (UpdateMeasurementPoints(hit.P, hit.N, power))
+            {
 				nPhotons++;
+            }
 
 #                   ifdef VISUALIZE_PHOTON_MAP
                 Sphere* sp = new Sphere;
