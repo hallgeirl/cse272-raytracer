@@ -15,7 +15,7 @@ const float PI = 3.1415926535897932384626433832795028841972f;
 const float DegToRad = PI/180.0f;
 const float RadToDeg = 180.0f/PI;
 const int TRACE_DEPTH = 8;
-const int TRACE_DEPTH_PHOTONS = 1;
+const int TRACE_DEPTH_PHOTONS = 8;
 const int TRACE_SAMPLES = 10000;
 const float PHOTON_MAX_DIST = 1e10;
 const float PHOTON_SAMPLES = 500.f;
@@ -24,7 +24,7 @@ const float PHOTON_ALPHA = 0.7f;
 const float DOF_APERTURE = .20f;
 const float DOF_FOCUS_PLANE = 15.3f;
 const float SURFACE_SAMPLES = 1e-4f;
-const float INITIAL_RADIUS = 0.01;
+const float INITIAL_RADIUS = 0.25;
 //const float DOF_FOCUS_PLANE = 25.23f;
 
 

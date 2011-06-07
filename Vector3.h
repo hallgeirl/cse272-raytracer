@@ -24,7 +24,7 @@ public:
     float __pad; //so that we can load all coordinates with one _mm_loadu_ps
     #endif
     Vector3() :
-        x(0), y(1), z(2) { }
+        x(0), y(0), z(0) { }
 
     Vector3(float s) :
         x(s), y(s), z(s) { }

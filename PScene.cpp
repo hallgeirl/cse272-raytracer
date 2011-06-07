@@ -19,6 +19,8 @@
 #include <omp.h>
 #endif 
 
+//#define DEBUG_PHOTONS
+
 #ifdef DEBUG_PHOTONS
     #ifdef OPENMP
         #define PHOTON_DEBUG(s) \
@@ -132,6 +134,7 @@ Scene::raytraceImage(Camera *cam, Image *img)
 
 	if (m_Points.size() != (width*height))
 		debug("uhohs\n");
+
     t1 += getTime();
     debug("Performing Adaptive passes...");
 	m_pointMap.balance();
@@ -359,6 +362,7 @@ Path MutatePath(const Path& goodPath, const float MutationSize)
 	} 
 
 	mutatedPath.Origin.x = ApplyDeltaRange(Mutate(MutationSize), goodPath.Origin.x, -10, 10);
+	mutatedPath.Origin.y = goodPath.Origin.y;
 	mutatedPath.Origin.z = ApplyDeltaRange(Mutate(MutationSize), goodPath.Origin.z, -1, 1);
 
 	return mutatedPath;
@@ -488,6 +492,7 @@ void Scene::RenderPhotonStats(Vector3 *tempImage, const int width, const int hei
 		long double A = PI * pow(hp->radius, 2);
 
 		long double result = hp->accFlux / A / (long double)m_photonsEmitted * ((long double)m_photonsUniform / (long double)m_photonsEmitted);
+//		long double result = (hp->position.y+1.)/2.;
 
 		tempImage[hp->i*width+hp->j] = Vector3(result);
 
@@ -524,7 +529,7 @@ void Scene::AdaptivePhotonPasses()
 	long mutated = 1;
 	long accepted = 0;
 
-    int Nphotons = 100000;
+    int Nphotons = 1000000;
 
 	//find starting good path
 	do
@@ -649,8 +654,8 @@ void Scene::traceProgressivePhotons()
 //Trace a single photon through the scene
 int Scene::tracePhoton(const Path& path, const Vector3& position, const Vector3& direction, const Vector3& power, int depth, bool bCausticRay)
 {
-    PHOTON_DEBUG(endl << "tracePhoton(): pos " << position << ", dir " << direction << ", pwr " << power << ", depth " << depth);
     if (depth >= TRACE_DEPTH_PHOTONS) return 0;
+    PHOTON_DEBUG(endl << "tracePhoton(): pos " << position << ", dir " << direction << ", pwr " << power << ", depth " << depth);
 
     //Create a ray to trace the scene with
     Ray ray(position+epsilon*direction, direction);
