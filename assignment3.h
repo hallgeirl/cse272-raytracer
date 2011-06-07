@@ -11,8 +11,8 @@ void a3task2();
 void a3task3();
 void BuildSquare(const Vector3& min, const Vector3& max, const Vector3& normal, const Material* mat);
 
-#define W 256
-#define H 256
+#define W 128
+#define H 128
 
 struct sample
 {

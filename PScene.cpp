@@ -113,6 +113,8 @@ Scene::raytraceImage(Camera *cam, Image *img)
             ray = cam->eyeRay(j, i, width, height, false);
 
 			traceScene(ray, shadeResult, depth);
+			m_Points[m_Points.size()-1]->j = j;
+			m_Points[m_Points.size()-1]->i = i;
 
 			#ifdef STATS
 			Stats::Primary_Rays++;
@@ -128,14 +130,20 @@ Scene::raytraceImage(Camera *cam, Image *img)
         }
     }
 
-	if (m_hitpoints.size() != (width*height))
+	if (m_Points.size() != (width*height))
 		debug("uhohs\n");
     t1 += getTime();
     debug("Performing Adaptive passes...");
+	m_pointMap.balance();
 
     t1 = -getTime();
 	AdaptivePhotonPasses();
     t1 += getTime();
+
+    #ifdef VISUALIZE_PHOTON_MAP
+    debug("Rebuilding BVH for visualization. Number of objects: %d\n", m_objects.size());
+    m_bvh.build(&m_objects);
+    #endif
 
 	RenderPhotonStats(tempImage, width, height, minIntensity, maxIntensity);
 
@@ -164,6 +172,7 @@ Scene::raytraceImage(Camera *cam, Image *img)
         img->drawScanline(i);
         #endif
     }
+	m_pointMap.empty();
 
     printf("Rendering Progress: 100.000%%\n");
     debug("Done raytracing!\n");
@@ -251,22 +260,9 @@ bool Scene::traceScene(const Ray& ray, Vector3& shadeResult, int depth)
 			//if diffuse material, send trace with RandomRay generate by Monte Carlo
 			if (hitInfo.material->isDiffuse())
 			{
-				g_scene->addHitPoint(new HitPoint(hitInfo.P, hitInfo.N, ray.d, hitInfo.material->getDiffuse()[0]/PI, 0.25f));
+				g_scene->addPoint(hitInfo.P, hitInfo.N, ray.d, hitInfo.material->getDiffuse()[0]/PI, 0.25f, true);
 
 				bModified = true;
-/*#ifdef PHOTON_MAPPING
-
-				float pos[3] = {hitInfo.P.x, hitInfo.P.y, hitInfo.P.z};
-				float normal[3] = {hitInfo.N.x, hitInfo.N.y, hitInfo.N.z};
-				float irradiance[3] = {0,0,0};
-				float caustic[3] = {0,0,0};
-            
-				m_photonMap.irradiance_estimate(irradiance, pos, normal, PHOTON_MAX_DIST, PHOTON_SAMPLES);
-				m_causticMap.irradiance_estimate(caustic, pos, normal, PHOTON_MAX_DIST, PHOTON_SAMPLES);
-
-                //irradiance_estimate does the dividing by PI and all that
-				shadeResult += Vector3(irradiance[0]+caustic[0], irradiance[1]+caustic[1], irradiance[2]+caustic[2]);
-#endif*/
 			}
 			
 			//if reflective material, send trace with ReflectRay
@@ -309,7 +305,7 @@ bool Scene::traceScene(const Ray& ray, Vector3& shadeResult, int depth)
 			if (!bModified)
 			{
 				//this means we hit an emissive material, so create a default measurement point
-				g_scene->addHitPoint(new HitPoint());
+				g_scene->addPoint(Vector3(0.f), Vector3(0.f), Vector3(0.f), 0.f, 0.f, false);
 			}
 		}
 		else
@@ -320,7 +316,7 @@ bool Scene::traceScene(const Ray& ray, Vector3& shadeResult, int depth)
                 hit = true;
             }
             else hit = false;
-			g_scene->addHitPoint(new HitPoint());
+			g_scene->addPoint(Vector3(0.f), Vector3(0.f), Vector3(0.f), 0.f, 0.f, false);
 		}
 	}
     
@@ -335,17 +331,12 @@ float Mutate(const float MutationSize)
 float ApplyDeltaRange(const float delta, float value, const float x1, const float x2)
 {
 	float range = x2 - x1;
-    float delta_ = delta;
-    /*if (delta < -range) delta_ = -range;
-    if (delta > range) delta_ = range;*/
-    float result = value + delta_;
+    float result = value + delta;
     
 	if (result < x1)
 		result += range;
 	else if ( result > x2)
 		result -= range;
-/*    if (delta > 1000 || delta < -1000)
-        cout << delta << endl; */
 
 	return result;
 }
@@ -364,7 +355,7 @@ Path MutatePath(const Path& goodPath, const float MutationSize)
 	// mutate phi/theta or random numbers?
 	for (int i = 0; i < (TRACE_DEPTH_PHOTONS-1); ++i)
 	{
-		//theta = u1 (0 - 2PI), pi = u2 (0 - PI/2)
+		//theta = u1 (0 - 2PI), phi = u2 (0 - PI/2)
 		mutatedPath.u[i*2] = ApplyDeltaRange(Mutate(MutationSize), goodPath.u[i*2], 0.f, 2.*PI);
 		mutatedPath.u[i*2+1] = ApplyDeltaRange(Mutate(MutationSize), goodPath.u[i*2+1], 0, PI/2.);
 	} 
@@ -375,23 +366,33 @@ Path MutatePath(const Path& goodPath, const float MutationSize)
 	return mutatedPath;
 }
 
-bool Scene::UpdateMeasurementPoints(const Vector3& pos, const Vector3& power)
+bool Scene::UpdateMeasurementPoints(const Vector3& pos, const Vector3& normal, const Vector3& power)
 {
 	bool hit = false;
 
-	for (int n = 0; n <  m_hitpoints.size(); ++n)
+	NearestPoints np;
+
+	m_pointMap.find_points(&np, pos, normal, 0.5, 100);
+
+	for (int i=1; i<=np.found; i++) {
+		Point *hp = np.index[i];
+
+	/*for (int n = 0; n <  m_Points.size(); ++n)
 	{
-		HitPoint *hp = m_hitpoints[n];
+		Point *hp = m_Points[n];*/
 
 		// skip the measurement points that did not hit a surface
 		if (!hp->bHit)
 			continue;
 
-		float d = sqrt(pow(pos.x - hp->position.x, 2) +
+		if(dot(hp->normal, normal) < 0.5)
+			continue;
+
+		float d = (pow(pos.x - hp->position.x, 2) +
 			pow(pos.y - hp->position.y, 2) +
 			pow(pos.z - hp->position.z, 2));
 
-		if (d <= hp->radius)
+		if (d <= hp->radius*hp->radius)
 		{
 			//wait to update radius and flux * BRDF
 			hp->newPhotons++;
@@ -407,9 +408,9 @@ bool Scene::UpdateMeasurementPoints(const Vector3& pos, const Vector3& power)
 void Scene::UpdatePhotonStats()
 {
     cout << "Photon Stats:" << endl;
-	for (int n = 0; n < m_hitpoints.size(); ++n)
+	for (int n = 0; n < m_Points.size(); ++n)
 	{
-		HitPoint *hp = m_hitpoints[n];
+		Point *hp = m_Points[n];
 		if (!hp->bHit)
 			continue;
 
@@ -422,7 +423,7 @@ void Scene::UpdatePhotonStats()
 
         //CircleSegment(Vector3(-1,0,-1), Vector3(0,0,1), hp->radius, hp->position, A1); 
         //CircleSegment(Vector3(1,0,-1), Vector3(0,0,1), hp->radius, hp->position, A1);
-        //m_hitpoints[n]->scaling = A1/A;
+        //m_Points[n]->scaling = A1/A;
 		
 		// only adding a ratio of the newly added photons
 		float delta = (hp->accPhotons + alpha * hp->newPhotons)/(hp->accPhotons + hp->newPhotons);
@@ -432,7 +433,7 @@ void Scene::UpdatePhotonStats()
 		// not sure about this flux acc, or about calculating the irradiance
 		hp->accFlux = ( hp->accFlux + hp->newFlux/hp->scaling) * delta;	
 
-        cout << hp->accFlux << "\t" << hp->accPhotons << "\t" << hp->accPhotons << "\n";
+        //cout << hp->accFlux << "\t" << hp->accPhotons << "\t" << hp->radius << "\n";
 
 		// reset new values
 		hp->newPhotons = 0;
@@ -444,9 +445,9 @@ void Scene::UpdatePhotonStats()
 //void PrintPhotonStats(ofstream& fp, const float photonsEmitted, const float m_photonsUniform)
 void Scene::PrintPhotonStats()
 {
-	for (int n = 0; n <  m_hitpoints.size(); ++n)
+	for (int n = 0; n <  m_Points.size(); ++n)
 	{
-		HitPoint *hp = m_hitpoints[n];
+		Point *hp = m_Points[n];
 
 		long double A = PI * pow(hp->radius, 2);
 
@@ -459,26 +460,24 @@ void Scene::RenderPhotonStats(Vector3 *tempImage, const int width, const int hei
 	float localMaxIntensity = -infinity, localMinIntensity = infinity;
 
 	int n;
-	for (n = 0; n <  m_hitpoints.size(); ++n)
+	for (n = 0; n <  m_Points.size(); ++n)
 	{
-		HitPoint *hp = m_hitpoints[n];
+		Point *hp = m_Points[n];
 
 		if (!hp->bHit)
 		{
-			tempImage[n] = m_bgColor;
+			tempImage[hp->i*width+hp->j] = m_bgColor;
 			continue;
 		}
-
-		//tempImage[n] = Vector3(1.f);
 
 		long double A = PI * pow(hp->radius, 2);
 
 		long double result = hp->accFlux / A / (long double)m_photonsEmitted * ((long double)m_photonsUniform / (long double)m_photonsEmitted);
 
-		tempImage[n] = Vector3(result);
+		tempImage[hp->i*width+hp->j] = Vector3(result);
 
-		if (tempImage[n].x < minIntensity) minIntensity = tempImage[n].x;
-        if (tempImage[n].x > maxIntensity) maxIntensity = tempImage[n].x;
+		if (tempImage[hp->i*width+hp->j].x < minIntensity) minIntensity = tempImage[hp->i*width+hp->j].x;
+        if (tempImage[hp->i*width+hp->j].x > maxIntensity) maxIntensity = tempImage[hp->i*width+hp->j].x;
 	}
 	if (n != (width*height))
 		debug("Measurement points do not equal image dimensions");
@@ -496,36 +495,6 @@ void Scene::RenderPhotonStats(Vector3 *tempImage, const int width, const int hei
 bool Scene::SamplePhotonPath(const Path& path, const Vector3& power)
 {
 	return (tracePhoton(path, path.Origin, path.Direction, power, 0, false) > 0);
-
-/*    HitInfo hitInfo(0, path.o, Vector3(0,1,0));
-
-	Ray ray(path.o, path.d);
-
-    while (true)
-    {
-        if (g_scene->trace(hitInfo, ray, 0, MIRO_TMAX))
-        {
-			//return if hit triangle backface
-			if (dot(ray.d, hitInfo.N) > 0)
-				return false;
-
-            //hit diffuse surface->we're done
-            if (hitInfo.material->isDiffuse())
-            {
-                return UpdateMeasurementPoints(hitInfo.P, power);
-            }
-            //hit reflective surface => reflect and trace again
-            else 
-            {
-                ray = ray.reflect(hitInfo);
-            }
-        }
-        //Missed the scene
-        else 
-        {
-            return false;
-        }
-    }*/
 }
 
 void Scene::AdaptivePhotonPasses()
@@ -551,15 +520,15 @@ void Scene::AdaptivePhotonPasses()
     long double msq = 0;
 	for (m_photonsEmitted = 0; m_photonsEmitted < Nphotons; m_photonsEmitted++)
     {
-		printf("photons emitted: %d\n", m_photonsEmitted);
 		if (m_photonsEmitted > 0 && m_photonsEmitted % 100000 == 0)
 		{
 			UpdatePhotonStats();
 		}
-        /*if (m_photonsEmitted > 0 && m_photonsEmitted % 100000 == 0)
+        if (m_photonsEmitted > 0 && m_photonsEmitted % 1000 == 0)
         {
-			PrintPhotonStats();
-        }*/
+			debug("photons emitted %d\n", m_photonsEmitted);
+			//PrintPhotonStats();
+        }
 
         //Test random photon path
         Path uniformPath(light->samplePhotonOrigin(), light->samplePhotonDirection());
@@ -572,10 +541,6 @@ void Scene::AdaptivePhotonPasses()
 
 		//Mutatation size
 		long double di = prev_di + (1. / (long double)mutated) * ((long double)accepted/(long double)mutated - 0.234);
-
-		// Convert to spherical coords (theta phi reversed)
-		/*float phi = acos(goodPath.d.z);
-		float theta = atan2(goodPath.d.y, goodPath.d.x);*/
 
 		// add mutation and convert back to cartesian coords
 		Path mutatedPath = MutatePath(goodPath, di);
@@ -595,17 +560,17 @@ void Scene::AdaptivePhotonPasses()
     }
 
 	UpdatePhotonStats();
-	PrintPhotonStats();
+	//PrintPhotonStats();
 }
 
 void Scene::ProgressivePhotonPass()
 {
 	traceProgressivePhotons();
 	
-	//iterate through all of the scene hitpoints
-	for (int n = 0; n < m_hitpoints.size(); ++n)
+	//iterate through all of the scene Points
+	for (int n = 0; n < m_Points.size(); ++n)
 	{
-		HitPoint *hp = m_hitpoints[n];
+		Point *hp = m_Points[n];
 
 		float pos[3] = {hp->position.x, hp->position.y, hp->position.z};
 		float normal[3] = {hp->normal.x, hp->normal.y, hp->normal.z};
@@ -661,7 +626,6 @@ void Scene::traceProgressivePhotons()
     #ifdef VISUALIZE_PHOTON_MAP
     debug("Rebuilding BVH for visualization. Number of objects: %d\n", m_objects.size());
     m_bvh.build(&m_objects);
-
     #endif
 }
 
@@ -709,42 +673,18 @@ int Scene::tracePhoton(const Path& path, const Vector3& position, const Vector3&
         {
             PHOTON_DEBUG("Diffuse contribution.");
             int nPhotons = 0;
-            //Diffuse.
-            //only store indirect lighting -- but store direct lighting for progressive mapping
-            //if (depth > 1)
-            {
-				// onlu increment photons stored if hit a measurement point
-				if (UpdateMeasurementPoints(hit.P, power))
-					nPhotons++;
 
-                //float pos[3] = {hit.P.x, hit.P.y, hit.P.z}, dir[3] = {direction.x, direction.y, direction.z}, pwr[3] = {power.x, power.y, power.z};
-#               //ifdef OPENMP
-#               //pragma omp critical
-#              // endif
-                {
-
-                    /*PHOTON_DEBUG("Storing photon at " << hit.P << ". Surface normal " << hit.N << " Is caustic photon: " << bCausticRay);
-                    if (bCausticRay)
-						m_causticMap.store(pwr, pos, dir);
-					else
-						m_photonMap.store(pwr, pos, dir);
-
-					nPhotons++;*/
+            //Diffuse, but store direct lighting for progressive mapping
+			// only increment photons stored if hit a measurement point
+			if (UpdateMeasurementPoints(hit.P, hit.N, power))
+				nPhotons++;
 
 #                   ifdef VISUALIZE_PHOTON_MAP
-                    Sphere* sp = new Sphere;
-                    sp->setCenter(hit.P); sp->setRadius(0.02f);
-                    Vector3 ref = power; //Use the normalized power as the reflectance for visualization.
-                    ref.normalize(); sp->setMaterial(new Phong(ref)); addObject(sp);
+                Sphere* sp = new Sphere;
+                sp->setCenter(hit.P); sp->setRadius(0.02f);
+                Vector3 ref = power; //Use the normalized power as the reflectance for visualization.
+                ref.normalize(); sp->setMaterial(new Phong(ref)); addObject(sp);
 #                   endif
-                }
-            }
-            /*else
-            {
-			    //Caustic Rays only send rays from specular surfaces
-			    if (bCausticRay)
-				    return 0;
-		    }*/
 
 #ifdef STATS
 			Stats::Photon_Bounces++;
@@ -759,9 +699,6 @@ int Scene::tracePhoton(const Path& path, const Vector3& position, const Vector3&
         }
         else if (rnd < prob[1])
         {
-			//only caustics should count this first bounce
-			//if (!bCausticRay && depth == 1)
-				//return 0;
 
 #ifdef STATS
 			Stats::Photon_Bounces++;
@@ -773,9 +710,6 @@ int Scene::tracePhoton(const Path& path, const Vector3& position, const Vector3&
         }
         else if (rnd < prob[2])
         {
-			//only caustics should count this first bounce
-			//if (!bCausticRay && depth == 1)
-			//	return 0;
 
 #ifdef STATS
 			Stats::Photon_Bounces++;

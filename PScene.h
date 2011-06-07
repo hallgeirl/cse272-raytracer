@@ -7,6 +7,7 @@
 #include "BVH.h"
 #include "Texture.h"
 #include "PhotonMap.h"
+#include "PointMap.h"
 
 class Camera;
 class Image;
@@ -37,7 +38,7 @@ struct Path
 	}
 };
 
-struct HitPoint
+/*struct Point
 {
 	Vector3 position;
 	Vector3 normal;
@@ -52,23 +53,24 @@ struct HitPoint
     float scaling;
 	bool bHit;
 
-	HitPoint()
+	Point()
 		:position(0.f), normal(0.f), dir(0.f), brdf(1.f), radius(0.f), accPhotons(0), newPhotons(0), accFlux(0.f), newFlux(0.f), scaling(1), bHit(false)
 	{}
 
-		HitPoint(const Vector3& inPosition, const Vector3& inNormal, const Vector3& inDir, const float inBRDF, const float inRadius)
+		Point(const Vector3& inPosition, const Vector3& inNormal, const Vector3& inDir, const float inBRDF, const float inRadius)
 		:position(inPosition), normal(inNormal), dir(inDir), brdf(inBRDF), radius(inRadius), accPhotons(0), newPhotons(0), accFlux(0.f), newFlux(0.f), scaling(1), bHit(true)
 	{}
-};
+};*/
 
-typedef std::vector<HitPoint*> HitPoints;
+typedef std::vector<Point*> Points;
 
 class Scene
 {
 public:
 	Scene() 
-		: m_photonMap(PhotonsPerLightSource*TRACE_DEPTH*MaxLights+MaxLights*10000), m_causticMap(CausticPhotonsPerLightSource*TRACE_DEPTH*MaxLights+MaxLights*10000), m_environment(0), m_bgColor(Vector3(0.0f)), m_photonsEmitted(0), m_photonsUniform(0)
+		: m_photonMap(PhotonsPerLightSource*TRACE_DEPTH*MaxLights+MaxLights*10000), m_causticMap(CausticPhotonsPerLightSource*TRACE_DEPTH*MaxLights+MaxLights*10000), m_pointMap(128*128), m_environment(0), m_bgColor(Vector3(0.0f)), m_photonsEmitted(0), m_photonsUniform(0)
 	{}
+	// TODO: need right image dimensions
     void addObject(Object* pObj)        
     { 
         if (pObj->isBounded()) m_objects.push_back(pObj);
@@ -81,8 +83,23 @@ public:
     void addLight(PointLight* pObj)     {m_lights.push_back(pObj);}
     const Lights* lights() const        {return &m_lights;}
 
-	void addHitPoint (HitPoint* hp)		{m_hitpoints.push_back(hp);}
-	const HitPoints* hitpoints() const	{return &m_hitpoints;}
+	void addPoint(const Vector3& inPosition, const Vector3& inNormal, const Vector3& inDir, const float inBRDF, const float inRadius, const bool inbHit)	
+	{
+		if (inbHit)
+		{
+			Point* hp = m_pointMap.store(inPosition, inNormal, inDir, inRadius, inBRDF, inbHit);
+			if (hp != NULL)
+				m_Points.push_back(hp);
+			else 
+				m_Points.push_back(new Point());
+
+//			m_Points.push_back(new Point(inPosition, inNormal, inDir, inBRDF, inRadius));
+		}
+		else
+			m_Points.push_back(new Point());
+
+	}
+	//const Points* Points() const	{return &m_Points;}
 
     void generatePhotonMap();
 	void AdaptivePhotonPasses();
@@ -100,7 +117,7 @@ public:
 	void PrintPhotonStats();
 	void RenderPhotonStats(Vector3 *tempImage, const int width, const int height, float minIntensity, float maxIntensity);
 	bool SamplePhotonPath(const Path& path, const Vector3& power);
-	bool UpdateMeasurementPoints(const Vector3& pos, const Vector3& power);
+	bool UpdateMeasurementPoints(const Vector3& pos, const Vector3& normal, const Vector3& power);
     void traceProgressivePhotons();
     int tracePhoton(const Path& path, const Vector3& position, const Vector3& direction, const Vector3& power, int depth, bool bCausticRay=false);
 	long int GetPhotonsEmitted() { return m_photonsEmitted; }
@@ -119,9 +136,10 @@ protected:
     Objects m_unboundedObjects;
     Photon_map m_photonMap;
     Photon_map m_causticMap;
+	Point_map m_pointMap;
     BVH m_bvh;
     Lights m_lights;
-	HitPoints m_hitpoints;
+	Points m_Points;
     Texture * m_environment; //Environment map
     Vector3 m_bgColor;       //Background color (for when environment map is not available)
 
