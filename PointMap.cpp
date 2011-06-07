@@ -76,9 +76,6 @@ void Point_map :: find_points(
     const int npoints) const     // number of photons to use
 //**********************************************
 {
-  np->dist2 = (float*)alloca( sizeof(float)*(npoints+1) );
-  np->index = (Point**)alloca( sizeof(Point*)*(npoints+1) );
-
   np->pos = pos; 
   np->max = npoints;
   np->found = 0;
@@ -224,7 +221,7 @@ void Point_map :: locate_points(
   node->dir = dir;
   node->radius = radius;
   node->brdf = brdf;
-  node->bHit;
+  node->bHit = bHit;
   node->accFlux = 0.f;
   node->accPhotons = 0;
   node->newFlux = 0.f;
