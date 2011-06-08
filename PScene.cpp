@@ -374,7 +374,8 @@ bool Scene::UpdateMeasurementPoints(const Vector3& pos, const Vector3& normal, c
 
     np.dist2 = new float[npoints+1];
     np.index = new Point*[npoints+1];
-	m_pointMap.find_points(&np, pos, normal, INITIAL_RADIUS, npoints);
+	m_pointMap.find_points(&np, pos, normal, max_radius+epsilon, npoints);
+	//m_pointMap.find_points(&np, pos, normal, INITIAL_RADIUS, npoints);
 
 	for (int i=1; i<=np.found; i++) {
 		Point *hp = np.index[i];
@@ -414,11 +415,15 @@ bool Scene::UpdateMeasurementPoints(const Vector3& pos, const Vector3& normal, c
 
 void Scene::UpdatePhotonStats()
 {
+	max_radius = 0.f;
 	for (int n = 0; n < m_Points.size(); ++n)
 	{
 		Point *hp = m_Points[n];
 		if (hp->bLight)
 			continue;
+
+		if (hp->radius > max_radius)
+			max_radius = hp->radius;
 
 		// continue if no new photons have been added
 		if(hp->newPhotons == 0)
@@ -474,7 +479,7 @@ void Scene::RenderPhotonStats(Vector3 *tempImage, const int width, const int hei
 
 		if (hp->bLight)
 		{
-			tempImage[hp->i*width+hp->j] = 1.0f;
+			tempImage[hp->i*width+hp->j] = 25.0f/PI;
 			continue;
 		}
 
@@ -493,6 +498,16 @@ void Scene::RenderPhotonStats(Vector3 *tempImage, const int width, const int hei
 	}
 	//if (n != (width*height))
 	//	debug("Measurement points do not equal image dimensions");
+
+	float sum = 0;
+	for (int i = 0; i < height; ++i)
+    {
+        for (int j = 0; j < width; ++j)
+		{
+			sum += tempImage[i*width+j].x;
+		}
+	}
+	cout << "Average Radiance: " << sum/(float)(width*height) << endl;
 }
 
 
@@ -512,7 +527,7 @@ void Scene::AdaptivePhotonPasses()
 	long mutated = 1;
 	long accepted = 0;
 
-    int Nphotons = 100000;
+    int Nphotons = 1000000;
 
 	//find starting good path
 	do
@@ -525,9 +540,10 @@ void Scene::AdaptivePhotonPasses()
     long double msq = 0;
 	for (m_photonsEmitted = 0; m_photonsEmitted < Nphotons; m_photonsEmitted++)
     {
-		if (m_photonsEmitted > 0 && m_photonsEmitted % 100 == 0)
+		if (m_photonsEmitted > 0 && m_photonsEmitted % 10000 == 0)
 		{
 			UpdatePhotonStats();
+			cout << "max radius" << max_radius << endl;
 		}
         if (m_photonsEmitted > 0 && m_photonsEmitted % 1000 == 0)
         {
