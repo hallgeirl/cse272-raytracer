@@ -100,6 +100,8 @@ void Image::writePPM(char* pcFile)
 
 void Image::writePPM(char *pcFile, unsigned char *data, int width, int height)
 {
+    printf("Writing image to %s\n", pcFile);
+
     FILE *fp = fopen(pcFile, "wb");
     if (!fp)
         fprintf(stderr, "Couldn't open PPM file %s for writing\n", pcFile);

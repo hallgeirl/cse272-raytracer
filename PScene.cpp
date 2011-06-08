@@ -379,9 +379,9 @@ bool Scene::UpdateMeasurementPoints(const Vector3& pos, const Vector3& normal, c
 	for (int i=1; i<=np.found; i++) {
 		Point *hp = np.index[i];
 
-	/*for (int n = 0; n <  m_Points.size(); ++n)
-	{
-		Point *hp = m_Points[n];*/
+//	for (int n = 0; n <  m_Points.size(); ++n)
+//	{
+//		Point *hp = m_Points[n];
 
 		// skip the measurement points that did not hit a surface
 		if (hp->bLight)
@@ -400,9 +400,7 @@ bool Scene::UpdateMeasurementPoints(const Vector3& pos, const Vector3& normal, c
 		{
 			//wait to update radius and flux * BRDF
 			hp->newPhotons++;
-			hp->newFlux += power.x;
 			hp->newFlux += power.x * hp->brdf;
-            cout << power.x << "\t" << hp->newFlux << "\t" << hp->brdf << "\n";
 
 			// can hit multiple measurement points	
 			hit = true;
@@ -428,15 +426,9 @@ void Scene::UpdatePhotonStats()
 
         double f_alpha = (long double)hp->accPhotons*5e-6;
 
-        float alpha = PHOTON_ALPHA + (1.-PHOTON_ALPHA)*(1.-exp(-f_alpha));
+        float alpha = PHOTON_ALPHA;
+//        float alpha = PHOTON_ALPHA + (1.-PHOTON_ALPHA)*(1.-exp(-f_alpha));
 
-        // Set scaling factor for next photon pass
-        float A = PI * pow(hp->radius, 2);
-
-        //CircleSegment(Vector3(-1,0,-1), Vector3(0,0,1), hp->radius, hp->position, A1); 
-        //CircleSegment(Vector3(1,0,-1), Vector3(0,0,1), hp->radius, hp->position, A1);
-        //m_Points[n]->scaling = A1/A;
-		
 		// only adding a ratio of the newly added photons
 		float delta = (hp->accPhotons + alpha * hp->newPhotons)/(hp->accPhotons + hp->newPhotons);
 		hp->radius *= sqrt(delta);
@@ -444,15 +436,11 @@ void Scene::UpdatePhotonStats()
 		
 		// not sure about this flux acc, or about calculating the irradiance
 		hp->accFlux = ( hp->accFlux + hp->newFlux) * delta;	
-		//hp->accFlux = ( hp->accFlux + hp->newFlux/hp->scaling) * delta;	
-
-        //cout << hp->accFlux << "\t" << hp->accPhotons << "\t" << hp->radius << "\n";
 
 		// reset new values
 		hp->newPhotons = 0;
 		hp->newFlux = 0.f;
 	}
-    cout << endl;
 }
 
 //void PrintPhotonStats(ofstream& fp, const float photonsEmitted, const float m_photonsUniform)
@@ -601,7 +589,7 @@ void Scene::ProgressivePhotonPass()
 		hp->accPhotons += (int)(PHOTON_ALPHA * M);
 		
 		//not sure about this flux acc, or about calculating the irradiance
-		hp->accFlux = ( hp->accFlux + irradiance[0]/hp->scaling ) * delta;	
+		hp->accFlux = ( hp->accFlux + irradiance[0]) * delta;	
 	}
 
 	m_photonMap.empty();

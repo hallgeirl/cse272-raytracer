@@ -12,6 +12,9 @@
 
 struct Point
 {
+    //debug
+    bool isHit;
+
 	Vector3 position;
 	Vector3 normal;
 	Vector3 dir;
@@ -30,12 +33,12 @@ struct Point
 	Point()
 		:position(0.f), normal(0.f), dir(0.f), brdf(1.f), radius(0.f), accPhotons(0), newPhotons(0), accFlux(0.f), newFlux(0.f), 
 			scaling(1), bLight(true), theta(0), phi(0), i(0), j(0)
-	{}
+	{isHit = false;}
 
 	Point(const Vector3& inPosition, const Vector3& inNormal, const Vector3& inDir, const float inBRDF, const float inRadius)
 		:position(inPosition), normal(inNormal), dir(inDir), brdf(inBRDF), radius(inRadius), accPhotons(0), newPhotons(0), accFlux(0.f), newFlux(0.f), 
 			scaling(1), bLight(false), theta(0), phi(0), i(0), j(0)
-	{}
+	{isHit = false;}
 };
 
 /* This structure is used only to locate the
