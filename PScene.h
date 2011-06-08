@@ -46,7 +46,7 @@ class Scene
 {
 public:
 	Scene() 
-		: m_photonMap(PhotonsPerLightSource*TRACE_DEPTH*MaxLights+MaxLights*10000), m_causticMap(CausticPhotonsPerLightSource*TRACE_DEPTH*MaxLights+MaxLights*10000), m_pointMap(W*H), m_environment(0), m_bgColor(Vector3(0.0f)), m_photonsEmitted(0), m_photonsUniform(0)
+		: m_photonMap(PhotonsPerLightSource*TRACE_DEPTH*MaxLights+MaxLights*10000), m_causticMap(CausticPhotonsPerLightSource*TRACE_DEPTH*MaxLights+MaxLights*10000), m_pointMap(W*H), m_environment(0), m_bgColor(Vector3(0.0f)), m_photonsEmitted(0), m_photonsUniform(0), max_radius(INITIAL_RADIUS)
 	{}
 	// TODO: need right image dimensions
     void addObject(Object* pObj)        
@@ -123,6 +123,8 @@ protected:
 
 	long int m_photonsEmitted;
 	long int m_photonsUniform;
+
+	float max_radius;
 };
 
 extern Scene * g_scene;
