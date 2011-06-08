@@ -76,7 +76,6 @@ public:
 
     void generatePhotonMap();
 	void AdaptivePhotonPasses();
-    void ProgressivePhotonPass();
 
     void preCalc();
     void openGL(Camera *cam);
@@ -87,11 +86,8 @@ public:
 	bool traceScene(const Ray& ray, Vector3& shadeResult, int depth);
 
 	void UpdatePhotonStats();
-	void PrintPhotonStats();
 	void RenderPhotonStats(Vector3 *tempImage, const int width, const int height);
-	bool SamplePhotonPath(const Path& path, const Vector3& power);
 	bool UpdateMeasurementPoints(const Vector3& pos, const Vector3& normal, const Vector3& power);
-    void traceProgressivePhotons();
     int tracePhoton(const Path& path, const Vector3& position, const Vector3& direction, const Vector3& power, int depth, bool bCausticRay=false);
 	long int GetPhotonsEmitted() { return m_photonsEmitted; }
 
