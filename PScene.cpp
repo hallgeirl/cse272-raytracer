@@ -469,8 +469,8 @@ void Scene::RenderPhotonStats(Vector3 *tempImage, const int width, const int hei
 
 void Scene::AdaptivePhotonPasses()
 {
-    Vector3 ptracing_results[W][H];
-    Vector3 tempImage[W*H];
+    Vector3* ptracing_results = new Vector3[W*H];
+    Vector3* tempImage = new Vector3[W*H];
     stringstream msq_out;
 
     //Record the error after every this many samples
@@ -513,7 +513,7 @@ void Scene::AdaptivePhotonPasses()
                     ptracing.read((char*)&pix.z, sizeof(float));
                 }
                 b_pt += pix.average();
-                ptracing_results[j][i] = pix;
+                ptracing_results[i*W+j] = pix;
             }
         }
         b_pt /= (long double)(w_pt*h_pt);
@@ -569,7 +569,7 @@ void Scene::AdaptivePhotonPasses()
                 for (int x = 0; x < W; x++)
                 {
                     Vector3 result = tempImage[x+y*W];
-                    msq += pow((ptracing_results[x][y] - result).average(), 2);
+                    msq += pow((ptracing_results[x+y*W] - result).average(), 2);
 
                     if (writeImage)
                     {
@@ -638,6 +638,9 @@ void Scene::AdaptivePhotonPasses()
         msq_outfile.open(filename);
         msq_outfile << msq_out.str().c_str();
     }
+
+	delete[] ptracing_results;
+	delete[] tempImage;
 }
 
 //Trace a single photon through the scene
