@@ -46,7 +46,7 @@ class Scene
 {
 public:
 	Scene() 
-		: m_photonMap(PhotonsPerLightSource*TRACE_DEPTH*MaxLights+MaxLights*10000), m_causticMap(CausticPhotonsPerLightSource*TRACE_DEPTH*MaxLights+MaxLights*10000), m_pointMap(W*H), m_environment(0), m_bgColor(Vector3(0.0f)), m_photonsEmitted(0), m_photonsUniform(0), max_radius(INITIAL_RADIUS)
+		: m_pointMap(W*H), m_environment(0), m_bgColor(Vector3(0.0f)), m_photonsEmitted(0), m_photonsUniform(0), max_radius(INITIAL_RADIUS)
 	{}
 	// TODO: need right image dimensions
     void addObject(Object* pObj)        
@@ -83,12 +83,12 @@ public:
     void raytraceImage(Camera *cam, Image *img);
     bool trace(HitInfo& minHit, const Ray& ray,
                float tMin = 0.0f, float tMax = MIRO_TMAX) const;
-	bool traceScene(const Ray& ray, Vector3& shadeResult, int depth);
+	bool traceScene(const Ray& ray, Vector3 contribution, int depth);
 
 	void UpdatePhotonStats();
 	void RenderPhotonStats(Vector3 *tempImage, const int width, const int height);
 	bool UpdateMeasurementPoints(const Vector3& pos, const Vector3& normal, const Vector3& power);
-    int tracePhoton(const Path& path, const Vector3& position, const Vector3& direction, const Vector3& power, int depth, bool bCausticRay=false);
+    int tracePhoton(const Path& path, const Vector3& position, const Vector3& direction, const Vector3& power, int depth);
 	long int GetPhotonsEmitted() { return m_photonsEmitted; }
 
 	void setEnvironment(Texture* environment) { m_environment = environment; }
@@ -103,8 +103,6 @@ protected:
     Objects m_objects;
     Objects m_specObjects;
     Objects m_unboundedObjects;
-    Photon_map m_photonMap;
-    Photon_map m_causticMap;
 	Point_map m_pointMap;
     BVH m_bvh;
     Lights m_lights;
@@ -113,9 +111,6 @@ protected:
     Vector3 m_bgColor;       //Background color (for when environment map is not available)
 
     static const int MaxLights = 10;
-
-    static const int PhotonsPerLightSource = 1;
-    static const int CausticPhotonsPerLightSource = 1;
 
 	long int m_photonsEmitted;
 	long int m_photonsUniform;

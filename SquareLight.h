@@ -6,6 +6,7 @@
 #include "TriangleMesh.h"
 #include "Triangle.h"
 #include <cmath>
+#include <stdio.h>
 
 // Work around for windows error 
 using std::min;
@@ -31,12 +32,9 @@ public:
     Vector3 getTangentU() const { return m_tangent1; } 
     Vector3 getTangentV() const { return m_tangent1; } 
 
-    float radiance(const Vector3& x, const Vector3& incdir) const 
+    virtual float radiance(const Vector3& x, const Vector3& incdir) const 
     { 
-//        if (dot(incdir, m_normal) < 0)
-            return m_wattage / (PI*m_dimensions[0]*m_dimensions[1]); 
-//        else
-//            return 0;
+        return m_wattage / (PI*m_dimensions[0]*m_dimensions[1]); 
     } 
 
     void setNormal(Vector3 n) 

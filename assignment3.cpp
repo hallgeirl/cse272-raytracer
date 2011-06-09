@@ -95,15 +95,14 @@ makeTask3Scene()
     g_scene->addObject(l);
 	g_scene->addLight(l);
     
-//    double e = 0.0005;
-    double e = 0.;
+    double e = 0.0005;
+//    double e = 0.;
     Phong* gray = new Phong(Vector3(0.75));
 	// Floor
 	BuildSquare(Vector3(-1,-1,-1), Vector3(1,-1,1), Vector3(0,1,0), gray);
 	
 	// Back Wall
 	BuildSquare(Vector3(-1,-1,1), Vector3(1,1,1), Vector3(0,0,-1), gray);
-
 
 	// Left Wall
 	BuildSquare(Vector3(-1-e,-1,-1), Vector3(-1,1,1), Vector3(1,0,0), new Phong(Vector3(0), Vector3(0.75)));
@@ -138,6 +137,8 @@ sample sampleBidirectionalPath(const path& eyepath, const path& lightpath, int w
 
     sample out;
     out.value = Vector3(0);
+    out.hit = true;
+
     Ray eye_ray = g_camera->eyeRay((int)(eyepath.u[0]*(double)W), (int)(eyepath.u[1]*(double)H), W, H, false);
     
     Ray light_ray(g_l->getPhotonOrigin(lightpath.u[0], lightpath.u[1]), g_l->samplePhotonDirection(lightpath.u[2], lightpath.u[3]));
@@ -149,7 +150,6 @@ sample sampleBidirectionalPath(const path& eyepath, const path& lightpath, int w
     HitInfo hitInfo;
     PointLight* l;
     Vector3 contribution(1./PI); //Current contribution from an eye point
-//    Vector3 contribution(1); //Current contribution from an eye point
 
     int light_points = 0;   //Number of hit points for the light path
     int eye_points = 0; //Number of hit points for the eye path
@@ -160,12 +160,11 @@ sample sampleBidirectionalPath(const path& eyepath, const path& lightpath, int w
     //First point is at the light source
     lighthits[0].x = light_ray.o;
     lighthits[0].N = g_l->getNormal();
-    lighthits[0].contrib = flux;
+//    lighthits[0].contrib = flux/g_l->area();
+    lighthits[0].contrib = g_l->radiance(Vector3(0), Vector3(0));
     light_points = 1;
     
     int bounces = 0;
-
-    out.hit = true;
 
     //Path trace from light source
     while (light_depth > 0)
@@ -359,8 +358,20 @@ sample samplePath(const path& p, int w, int h)
             {
                 //Push the hit point inside (or outside if on the way out) the refractive object
                 hitInfo.P += ray.d*epsilon*2.;
-                ray = ray.refract(hitInfo);
-                contribution = contribution * hitInfo.material->getRefraction();
+
+			    float Rs = ray.getReflectionCoefficient(hitInfo); //Coefficient from fresnel
+
+                if (frand() < Rs)
+                {
+					//Send a reflective ray (Fresnel reflection)
+					ray = ray.reflect(hitInfo);
+                    contribution = contribution * hitInfo.material->getRefraction();
+		        }
+                else
+                {
+                    ray = ray.refract(hitInfo);
+                    contribution = contribution * hitInfo.material->getRefraction();
+                }
             }
             //Did we hit a diffuse object?
             else
@@ -743,6 +754,7 @@ void a3hacker1()
                     if (l != 0)
                     {
                         direct_img[x][y] = l->radiance(hitInfo.P, ray.d)*contrib;
+//                        cout << l->radiance(hitInfo.P, ray.d) << endl;
                         depth = -1;
                     }
                     else if (hitInfo.material->isReflective())
@@ -785,7 +797,6 @@ void a3hacker1()
     }
 
     b /= Nseeds;
-
     cout << "b=" << b+direct_b << endl;
 
     double b_result = 0;

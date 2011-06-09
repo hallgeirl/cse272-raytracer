@@ -12,6 +12,7 @@
 
 struct Point
 {
+
 	Vector3 position;
 	Vector3 normal;
 	Vector3 dir;
