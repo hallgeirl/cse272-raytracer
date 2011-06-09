@@ -147,7 +147,7 @@ rotate(float angle, float x, float y, float z)
           xzcinv + ys, yzcinv - xs, z2 + c*(1-z2), 0,
           0, 0, 0, 1);
     return m;
-}
+}        
 
 inline bool
 CircleSegment(const Vector3& rayOrigin, const Vector3& rayDir, const float radius, const Vector3& center, float& area)
@@ -166,10 +166,12 @@ CircleSegment(const Vector3& rayOrigin, const Vector3& rayDir, const float radiu
     const float sqrt_discrim = sqrt(discrim);
 
     // solve the quadratic equation
-    const float t[2] = {(-b-sqrt_discrim)/(2.0f*a), (-b+sqrt_discrim)/(2.0f*a)};
+    float t[2] = {(-b-sqrt_discrim)/(2.0f*a), (-b+sqrt_discrim)/(2.0f*a)};
 
     // since we know that discrim >= 0, t[0] < t{1]
     // return the t closest to us that is within range
+	if (t[0] < 0)
+		t[0] = 0;
 
 	Vector3 intersectP1 = rayOrigin + rayDir * t[0];
 	Vector3 intersectP2 = rayOrigin + rayDir * t[1];
@@ -177,8 +179,40 @@ CircleSegment(const Vector3& rayOrigin, const Vector3& rayDir, const float radiu
 	float theta = acos(dot((intersectP1 - center).normalize(), (intersectP2 - center).normalize()));
 	float segArea = 0.5f * (theta - sin(theta)) * pow(radius, 2);
 
-	area = (PI * pow(radius, 2)) - segArea;
+	area = segArea;
 	return true;
+}
+
+inline float 
+AdjustCorners(const float& radius, const Vector3& position, const Vector3& normal) 
+{
+	float area = radius*radius*PI;
+	float areaBase = area;
+	float tempArea = 0.f;
+
+	for (float i=-1.f; i<=1.f; i+=2.f)
+	{
+		Vector3 origin(i);
+		for (int n = 0; n < 3; ++n)
+		{
+			Vector3 dir;
+			switch(n)
+			{
+				case 0: dir.x = -1*i; break;
+				case 1: dir.y = -1*i; break;
+				case 2: dir.z = -1*i; break;
+			}
+			//skip the normal direction
+			if (abs(dot(dir, normal)) > epsilon)
+				continue;
+
+			if (CircleSegment(origin, dir, radius, position, tempArea))
+			{
+				area -= tempArea;
+			}
+		}
+	}
+	return area/areaBase;
 }
 
 #endif

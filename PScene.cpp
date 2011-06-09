@@ -135,11 +135,6 @@ Scene::raytraceImage(Camera *cam, Image *img)
 	AdaptivePhotonPasses();
     t1 += getTime();
 
-    #ifdef VISUALIZE_PHOTON_MAP
-    debug("Rebuilding BVH for visualization. Number of objects: %d\n", m_objects.size());
-    m_bvh.build(&m_objects);
-    #endif
-
 	RenderPhotonStats(tempImage, width, height);
 
     debug("Performing tone mapping...");
@@ -406,30 +401,20 @@ void Scene::UpdatePhotonStats()
         float alpha = PHOTON_ALPHA;
 //        float alpha = PHOTON_ALPHA + (1.-PHOTON_ALPHA)*(1.-exp(-f_alpha));
 
+        // Set scaling factor for next photon pass
+		hp->scaling = AdjustCorners(hp->radius, hp->position, hp->normal);;
+
 		// only adding a ratio of the newly added photons
 		float delta = (hp->accPhotons + alpha * hp->newPhotons)/(hp->accPhotons + hp->newPhotons);
 		hp->radius *= sqrt(delta);
 		hp->accPhotons += (int)(alpha * hp->newPhotons);
 		
 		// not sure about this flux acc, or about calculating the irradiance
-		hp->accFlux = ( hp->accFlux + hp->newFlux) * delta;	
+		hp->accFlux = ( hp->accFlux + hp->newFlux/hp->scaling) * delta;	
 
 		// reset new values
 		hp->newPhotons = 0;
 		hp->newFlux = 0.f;
-	}
-}
-
-//void PrintPhotonStats(ofstream& fp, const float photonsEmitted, const float m_photonsUniform)
-void Scene::PrintPhotonStats()
-{
-	for (int n = 0; n <  m_Points.size(); ++n)
-	{
-		Point *hp = m_Points[n];
-
-		long double A = PI * pow(hp->radius, 2);
-
-		long double result = hp->accFlux / A / (long double)m_photonsEmitted * ((long double)m_photonsUniform / (long double)m_photonsEmitted);
 	}
 }
 
@@ -482,16 +467,10 @@ void Scene::RenderPhotonStats(Vector3 *tempImage, const int width, const int hei
 	cout << "Average Radiance: " << sum/(double)(width*height) << endl;
 }
 
-
-bool Scene::SamplePhotonPath(const Path& path, const Vector3& power)
-{
-	return (tracePhoton(path, path.Origin, path.Direction, power, 0, false) > 0);
-}
-
 void Scene::AdaptivePhotonPasses()
 {
-    Vector3 ptracing_results[W][H];
-    Vector3 tempImage[W*H];
+    Vector3* ptracing_results = new Vector3[W*H];
+    Vector3* tempImage = new Vector3[W*H];
     stringstream msq_out;
 
     //Record the error after every this many samples
@@ -534,7 +513,7 @@ void Scene::AdaptivePhotonPasses()
                     ptracing.read((char*)&pix.z, sizeof(float));
                 }
                 b_pt += pix.average();
-                ptracing_results[j][i] = pix;
+                ptracing_results[i*W+j] = pix;
             }
         }
         b_pt /= (long double)(w_pt*h_pt);
@@ -550,15 +529,15 @@ void Scene::AdaptivePhotonPasses()
 	long mutated = 1;
 	long accepted = 0;
 
-    int Nphotons = 100000001;
+    //int Nphotons = 100000001;
+    int Nphotons = 1000001;
 
 	//find starting good path
 	do
 	{
         goodPath.Origin = light->samplePhotonOrigin();
         goodPath.Direction = light->samplePhotonDirection();
-	} while (!SamplePhotonPath(goodPath, power));
-
+	} while (tracePhoton(goodPath, goodPath.Origin, goodPath.Direction, power, 0) == 0);
 
     long double msq = 0;
 	for (m_photonsEmitted = 0; m_photonsEmitted < Nphotons; m_photonsEmitted++)
@@ -566,8 +545,9 @@ void Scene::AdaptivePhotonPasses()
 		if (m_photonsEmitted > 0 && m_photonsEmitted % 10000 == 0)
 			UpdatePhotonStats();
 
-        if (m_photonsEmitted > 0 && m_photonsEmitted % 1000 == 0)
+        if (m_photonsEmitted > 0 && m_photonsEmitted % 10000 == 0)
         {
+
 			debug("Photons emitted %d of %d [%f%%] MSQ: %Lf      \r", m_photonsEmitted, Nphotons, 100.f*(float)m_photonsEmitted/(float)Nphotons, msq);
 			//PrintPhotonStats();
         }
@@ -589,7 +569,7 @@ void Scene::AdaptivePhotonPasses()
                 for (int x = 0; x < W; x++)
                 {
                     Vector3 result = tempImage[x+y*W];
-                    msq += pow((ptracing_results[x][y] - result).average(), 2);
+                    msq += pow((ptracing_results[x+y*W] - result).average(), 2);
 
                     if (writeImage)
                     {
@@ -621,7 +601,7 @@ void Scene::AdaptivePhotonPasses()
 
         //Test random photon path
         Path uniformPath(light->samplePhotonOrigin(), light->samplePhotonDirection());
-		if (SamplePhotonPath(uniformPath, power))
+		if (tracePhoton(uniformPath, uniformPath.Origin, uniformPath.Direction, power, 0) > 0)
 		{
 			goodPath = uniformPath;
 			++m_photonsUniform;
@@ -638,18 +618,17 @@ void Scene::AdaptivePhotonPasses()
 		prev_di = di;
 
 		// Test mutated photon path
-		if (SamplePhotonPath(mutatedPath, power))
+		if (tracePhoton(mutatedPath, mutatedPath.Origin, mutatedPath.Direction, power, 0) > 0)
 		{
 			goodPath = mutatedPath;
 			++accepted;
 			continue;
 		}
 		// Reuse good path
-		SamplePhotonPath(goodPath, power);		
+		tracePhoton(goodPath, goodPath.Origin, goodPath.Direction, power, 0);
     }
 
 	UpdatePhotonStats();
-	//PrintPhotonStats();
 
     //write msq to file
     {
@@ -659,76 +638,13 @@ void Scene::AdaptivePhotonPasses()
         msq_outfile.open(filename);
         msq_outfile << msq_out.str().c_str();
     }
-}
 
-void Scene::ProgressivePhotonPass()
-{
-	traceProgressivePhotons();
-	
-	//iterate through all of the scene Points
-	for (int n = 0; n < m_Points.size(); ++n)
-	{
-		Point *hp = m_Points[n];
-
-		float pos[3] = {hp->position.x, hp->position.y, hp->position.z};
-		float normal[3] = {hp->normal.x, hp->normal.y, hp->normal.z};
-		float irradiance[3] = {0,0,0};
-    
-		int M = m_photonMap.irradiance_estimate(irradiance, pos, normal, hp->radius, PHOTON_SAMPLES, false);
-		
-		//only adding a ratio of the newly added photons
-		float delta = (hp->accPhotons + PHOTON_ALPHA * M)/(hp->accPhotons + M);
-		hp->radius *= sqrt(delta);
-		hp->accPhotons += (int)(PHOTON_ALPHA * M);
-		
-		//not sure about this flux acc, or about calculating the irradiance
-		hp->accFlux = ( hp->accFlux + irradiance[0]) * delta;	
-	}
-
-	m_photonMap.empty();
-} 
-
-//Shoot out all photons and trace them
-void Scene::traceProgressivePhotons()
-{
-    if (PhotonsPerLightSource == 0) 
-    {
-        m_photonMap.balance();
-        return;
-    }
-    
-    int photonsAdded = 0; //Photons added to the scene
-    
-    for (int l = 0; l < m_lights.size(); l++)
-    {
-        PointLight *light = m_lights[l];
-    
-        #ifdef OPENMP
-        #pragma omp parallel for
-        #endif
-        for (int i = 0; i < PhotonsPerLightSource; i++)
-        {
-            //Create a new photon
-            Vector3 power = light->color() * light->wattage(); 
-            Vector3 dir = light->samplePhotonDirection();
-            Vector3 pos = light->samplePhotonOrigin();
-			//printf("squarelight photon position: %f %f %f and direction %f %f %f \n", pos.x, pos.y, pos.z, dir.x, dir.y, dir.z);
-            //tracePhoton(pos, dir, power, 0);
-        }
-
-		m_photonsEmitted += PhotonsPerLightSource;
-    }
-	// do not scale photons in progressive photon mapping
-    // m_photonMap.scale_photon_power(1.0f/(float)totalPhotons);
-    m_photonMap.balance();
-    #ifdef VISUALIZE_PHOTON_MAP
-    debug("Rebuilding BVH for visualization. Number of objects: %d\n", m_objects.size());
-    m_bvh.build(&m_objects);
-    #endif
+	delete[] ptracing_results;
+	delete[] tempImage;
 }
 
 //Trace a single photon through the scene
-int Scene::tracePhoton(const Path& path, const Vector3& position, const Vector3& direction, const Vector3& power, int depth, bool bCausticRay)
+int Scene::tracePhoton(const Path& path, const Vector3& position, const Vector3& direction, const Vector3& power, int depth)
 {
     if (depth >= TRACE_DEPTH_PHOTONS) return 0;
     PHOTON_DEBUG(endl << "tracePhoton(): pos " << position << ", dir " << direction << ", pwr " << power << ", depth " << depth);
@@ -779,13 +695,6 @@ int Scene::tracePhoton(const Path& path, const Vector3& position, const Vector3&
 				nPhotons++;
             }
 
-#           ifdef VISUALIZE_PHOTON_MAP
-            Sphere* sp = new Sphere;
-            sp->setCenter(hit.P); sp->setRadius(0.02f);
-            Vector3 ref = power; //Use the normalized power as the reflectance for visualization.
-            ref.normalize(); sp->setMaterial(new Phong(ref)); addObject(sp);
-#           endif
-
 #ifdef STATS
 			Stats::Photon_Bounces++;
 #endif
@@ -795,7 +704,7 @@ int Scene::tracePhoton(const Path& path, const Vector3& position, const Vector3&
             r.isDiffuse = true;
             HitInfo diffHit;
             PHOTON_DEBUG("Tracing diffuse photon");
-            return nPhotons + tracePhoton(path, r.o, r.d, diffuseColor*power/prob[0], depth, bCausticRay);
+            return nPhotons + tracePhoton(path, r.o, r.d, diffuseColor*power/prob[0], depth);
         }
         else if (rnd < prob[1])
         {
@@ -806,7 +715,7 @@ int Scene::tracePhoton(const Path& path, const Vector3& position, const Vector3&
             //Reflect.
             Ray refl = ray.reflect(hit);
             PHOTON_DEBUG("Tracing reflected photon");
-            return tracePhoton(path, hit.P, refl.d, power, depth, bCausticRay);
+            return tracePhoton(path, hit.P, refl.d, power, depth);
         }
         else if (rnd < prob[2])
         {
@@ -822,13 +731,13 @@ int Scene::tracePhoton(const Path& path, const Vector3& position, const Vector3&
 			{
                 Ray refl = ray.reflect(hit);
                 PHOTON_DEBUG("Tracing reflected photon (Fresnel reflection)");
-                return tracePhoton(path, hit.P, refl.d, power, depth, bCausticRay);
+                return tracePhoton(path, hit.P, refl.d, power, depth);
 			}
 			else
 			{
                 Ray refr = ray.refract(hit);
                 PHOTON_DEBUG("Tracing refracted photon");
-                return tracePhoton(path, hit.P, refr.d, power, depth, bCausticRay);
+                return tracePhoton(path, hit.P, refr.d, power, depth);
             }
         }
     }
