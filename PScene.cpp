@@ -563,7 +563,7 @@ void Scene::AdaptivePhotonPasses()
     long double msq = 0;
 	for (m_photonsEmitted = 0; m_photonsEmitted < Nphotons; m_photonsEmitted++)
     {
-		if (m_photonsEmitted > 0 && m_photonsEmitted % 1000 == 0)
+		if (m_photonsEmitted > 0 && m_photonsEmitted % 10000 == 0)
 			UpdatePhotonStats();
 
         if (m_photonsEmitted > 0 && m_photonsEmitted % 1000 == 0)
@@ -655,7 +655,7 @@ void Scene::AdaptivePhotonPasses()
     {
         ofstream msq_outfile;
         char filename[100];
-        sprintf(filename, "bidirectional_%s_msq.dat\0", version);
+        sprintf(filename, "adaptiveppm_%s_msq.dat\0", version);
         msq_outfile.open(filename);
         msq_outfile << msq_out.str().c_str();
     }
