@@ -78,13 +78,12 @@ public:
   void find_points(
 	NearestPoints* np,
     const Vector3& pos,            // surface position
-    const Vector3& normal,         // surface normal at pos
     const float max_dist,          // max distance to look for photons
     const int npoints) const; // if the flux should be normalized by density    
 
   void locate_points(
     NearestPoints *const np,      // np is used to locate the photons
-    const int index, const Vector3& normal ) const;       // call with index = 1
+    const int index) const;       // call with index = 1
 
 private:
 

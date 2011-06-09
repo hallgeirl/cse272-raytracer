@@ -155,13 +155,16 @@ sample sampleBidirectionalPath(const path& eyepath, const path& lightpath, int w
     int eye_points = 0; //Number of hit points for the eye path
     hit_point lighthits[LIGHT_PATH_LENGTH+1]; //Hit points for light path (there is one hit point at the lightsource itself, so +1)
     hit_point eyehits[EYE_PATH_LENGTH];       //Hit points for the eye path
+//    Vector3 flux(g_l->wattage()/PI);
     Vector3 flux(g_l->wattage());
 
     //First point is at the light source
     lighthits[0].x = light_ray.o;
     lighthits[0].N = g_l->getNormal();
 //    lighthits[0].contrib = flux/g_l->area();
-    lighthits[0].contrib = g_l->radiance(Vector3(0), Vector3(0));
+//    lighthits[0].contrib = g_l->radiance(Vector3(0), Vector3(0));
+    lighthits[0].contrib = flux;
+    lighthits[0].theta_out = light_ray.d;
     light_points = 1;
     
     int bounces = 0;
@@ -202,6 +205,7 @@ sample sampleBidirectionalPath(const path& eyepath, const path& lightpath, int w
                     lighthits[light_points].contrib = flux;
                     lighthits[light_points].N = hitInfo.N;
                     lighthits[light_points].reflectance = hitInfo.material->getDiffuse();
+                    lighthits[light_points].theta_out = light_ray.d;
                     light_points++;
                     flux = flux * hitInfo.material->getDiffuse();
                 }
@@ -222,7 +226,6 @@ sample sampleBidirectionalPath(const path& eyepath, const path& lightpath, int w
     
     pathpos = 2;
     double weight = 1./(double)(EYE_PATH_LENGTH+LIGHT_PATH_LENGTH);
-
     int pathcount[EYE_PATH_LENGTH+LIGHT_PATH_LENGTH+2]; //Number of paths of each length [index i has the number of paths of length i+1]
 
     memset(pathcount, 0, sizeof(int)*(EYE_PATH_LENGTH+LIGHT_PATH_LENGTH+2));
@@ -258,15 +261,17 @@ sample sampleBidirectionalPath(const path& eyepath, const path& lightpath, int w
             //Did we hit a diffuse object?
             else
             {
+                //Next ray is a diffuse reflection ray
+                eye_ray = eye_ray.diffuse(hitInfo, eyepath.u[pathpos], eyepath.u[pathpos+1]);
+
                 contribution = contribution * hitInfo.material->getDiffuse();
 
                 eyehits[eye_points].x = hitInfo.P;
                 eyehits[eye_points].N = hitInfo.N;
                 eyehits[eye_points].contrib = contribution;
+                eyehits[eye_points].theta_out = eye_ray.d;
                 eye_points++;
 
-                //Next ray is a diffuse reflection ray
-                eye_ray = eye_ray.diffuse(hitInfo, eyepath.u[pathpos], eyepath.u[pathpos+1]);
 
                 //Count paths that start with eye_points vertices from the eye
                 for (int i = 0; i < light_points; i++)
@@ -285,33 +290,149 @@ sample sampleBidirectionalPath(const path& eyepath, const path& lightpath, int w
         }
     }
 
-    if (!out.direct)
+
+    if (!out.direct && eye_points > 0)
     {
+        lighthits[light_points].theta_out = eyehits[eye_points-1].x - lighthits[light_points-1].x;
+        lighthits[light_points].theta_out.normalize();
+
+        double pLight[LIGHT_PATH_LENGTH+2],
+               pEye[EYE_PATH_LENGTH+1];
+        
+        //Probability ratios p[i+1]/p[i]
+        //First dimension gives the length
+//        double r[LIGHT_PATH_LENGTH+EYE_PATH_LENGTH+1][LIGHT_PATH_LENGTH+EYE_PATH_LENGTH+1];
+
+//        for (int l = 1; l <= light_points+eye_points; l++)
+//        {
+//            //l = path length-1
+//            hit_point* prev = &lighthits[0],  //x_i-1
+//                     * current = (light_points > 1 ? &lighthits[1] : &eyehits[0]); //x_i
+//            r[l][0] = (1./g_l->area()) 
+//                 / (abs(pow(dot(prev->N, prev->theta_out), 2) * dot(current->N, prev->theta_out) / (current->x - prev->x).length2())/PI);
+//
+//            for (int i = 1; i < l-1; i++)
+//            {
+//                hit_point* next = (light_points > i+1 ? &lighthits[i+1] : &eyehits[i+1-light_points]);
+//                r[l][i] = abs(pow(dot(prev->N, prev->theta_out), 2) * dot(current->N, prev->theta_out) * (next->x - current->x).length2())
+//                        / abs(pow(dot(current->N, current->theta_out), 2) * dot(next->N, current->theta_out) * (prev->x - current->x).length2());
+//
+//                prev = current;
+//                current = next;
+//            }
+//            current = (eye_points > 1 ? &eyehits[1] : &lighthits[light_points-1]);
+//            hit_point* next = &eyehits[0];
+//
+//            r[l][l] = abs(pow(dot(current->N, current->theta_out), 2) * dot(next->N, current->theta_out) / (next->x - current->x).length2()) / PI;
+////            cout << r[l][l] << " " << (next->x - current->x).length2() <<  endl;
+//        }
+
+        double p_sum[LIGHT_PATH_LENGTH+EYE_PATH_LENGTH+1]; //sum of probabilties for each path length
+        memset(p_sum, 0, sizeof(double)*(LIGHT_PATH_LENGTH+EYE_PATH_LENGTH+1));
+//
+        pLight[0] = 1;
+        pLight[1] = 1./g_l->area();
+
+        //Compute probabilities for creating the paths that we did
+        for (int i = 2; i < light_points+1; i++)
+        {
+            pLight[i] = pLight[i-1] 
+                      * abs(dot(lighthits[i-2].theta_out, lighthits[i-2].N)) / PI
+                      * abs(dot(lighthits[i-2].N, lighthits[i-2].theta_out) * dot(lighthits[i-1].N, lighthits[i-2].theta_out))
+                      / (lighthits[i-2].x-lighthits[i-1].x).length2(); 
+        }
+
+        pEye[0] = 1;
+        pEye[1] = 1.;
+
+        for (int j = 2; j < eye_points+1; j++)
+        {
+            pEye[j] = pEye[j-1] 
+                    * abs(dot(eyehits[j-2].theta_out, eyehits[j-2].N)) / PI 
+                    * abs(dot(eyehits[j-2].N, eyehits[j-2].theta_out) * dot(eyehits[j-1].N, eyehits[j-2].theta_out))
+                    / (eyehits[j-2].x-eyehits[j-1].x).length2();
+        }
+
+//        cout << "light points: " << light_points << " Eye points: " << eye_points << endl;
+        //Compute the summed probabilities of generating paths of length 2 or more
+//        for (int l = 1; l < eye_points+light_points; l++)
+//        {
+//        p_sum[l] = 0;
+        for (int i = 0; i < light_points; i++)
+        {
+            for (int j = 0; j < eye_points; j++)
+            {
+//                p_sum[i+j+1] += pLight[i+1]*pEye[j+1];
+                p_sum[i+j+1] += pow(pLight[i+1]*pEye[j+1],2);
+            }
+        }
+        
+
+        double weights[LIGHT_PATH_LENGTH+EYE_PATH_LENGTH+5];
+        memset(weights, 0, (LIGHT_PATH_LENGTH+EYE_PATH_LENGTH+5)*sizeof(double));
+
         HitInfo hitTmp;
         out.value = Vector3(0);
         for (int i = 0; i < light_points; i++)
         {
             for (int j = 0; j < eye_points; j++)
             {
+                //need to compute sum(p_s/p_i)
+                int s = i+1, t = j+1, path_length = i+j+1;
+                double p = 1;
+
+                weight = p;
+
+//                for (int k = s-1; k >= 0; k--)
+//                {
+//                    p *= r[path_length][k]; //p <- p_s/p_k
+//                    weight += pow(p, 2);
+//                    cout << "p=" << p << endl;
+//                }
+//
+//                p = 1;
+//                for (int k = s; k < path_length; k++)
+//                {
+//                    p /= r[path_length][k]; //p <- p_s/p_k
+//                    weight += pow(p, 2);
+//                }
+//
+//                weight = 1./weight;
+
                 Vector3 l = lighthits[i].x-eyehits[j].x;
                 double length = l.length();
 
                 //Weight is 1/n where n is the number of paths that has eye_points eye points as prefixes and i light points as suffixes
-                weight = 1./(double)(pathcount[i+j+1]);
+//                weight = 1./(double)(pathcount[i+j+1]);
+//                weight = pLight[i+1]*pEye[j+1]/p_sum[i+j+1];
+                weight = pow(pLight[i+1]*pEye[j+1],2)/p_sum[i+j+1];
+                weights[i+j+1] += weight;
+
                 l /= length;
                 Ray shadow(eyehits[j].x, l);
                 if (!g_scene->trace(hitTmp, shadow, 0, length-epsilon))
                 {
+                    double G = abs(dot(l, eyehits[j].N)) * abs(dot(l, lighthits[i].N)) / (eyehits[j].x-lighthits[i].x).length2();
+//                    G = min(G, 100.);
+//                    if (G > 100) 
+//                        cout << G << endl;
                     //               brdf(eye point)               flux                   incid. angle to eye point   incid.angle to light point
-//                    Vector3 result = eyehits[j].contrib * weight * lighthits[i].contrib * abs(dot(l, eyehits[j].N)) * abs(dot(l, lighthits[i].N)) / (length*length);
-                    Vector3 result = eyehits[j].contrib * weight * lighthits[i].contrib * abs(dot(l, eyehits[j].N)) * abs(dot(l, lighthits[i].N)) / (eyehits[j].x-lighthits[i].x).length2();
+                    Vector3 result = weight * eyehits[j].contrib * lighthits[i].contrib * G / (PI*PI);
                     if (i > 0)
-                        result *= lighthits[i].reflectance/PI;
+                        result *= lighthits[i].reflectance;
+
+//                    if (result.average() > 1000) cout << result.average() << endl;
 
                     out.value += result;
+//                    cout << result << endl;
                 }
             }
         }
+//        for (int i = 1; i < eye_points+light_points; i++)
+//        {
+//            cout << "weight sum path length " << i+1 << ": " << weights[i] << endl;
+//        }
+//        cout << endl;
     }
     else
     {
@@ -725,7 +846,6 @@ void a3hacker1()
         b_pt /= (long double)(w_pt*h_pt);
         cout << "Done reading path tracing results. b = " << b_pt << endl;
     }
-    cout << "Generating path seeds..." << endl;
 
     long double b = 0;
 
@@ -770,6 +890,7 @@ void a3hacker1()
     }
     direct_b /= (double)(W*H);
 
+    cout << "Generating path seeds..." << endl;
     //Generate path seeds
     for (int i = 1; i <= Nseeds; i++)
     {

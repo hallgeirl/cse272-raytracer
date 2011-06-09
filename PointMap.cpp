@@ -71,7 +71,6 @@ Point_map :: ~Point_map()
 void Point_map :: find_points(
         NearestPoints* np,
         const Vector3& pos,            // surface position
-        const Vector3& normal,         // surface normal at pos
         const float max_dist,          // max distance to look for photons
         const int npoints) const     // number of photons to use
 //**********************************************
@@ -83,7 +82,7 @@ void Point_map :: find_points(
     np->dist2[0] = max_dist*max_dist;
 
     // locate the nearest points
-    locate_points( np, 1, normal);
+    locate_points( np, 1);
 }
 
 
@@ -93,7 +92,7 @@ void Point_map :: find_points(
 //******************************************
 void Point_map :: locate_points(
         NearestPoints *const np,
-        const int index, const Vector3& normal) const
+        const int index) const
 //******************************************
 {
     Point *p = &points[index];
@@ -131,7 +130,7 @@ void Point_map :: locate_points(
 
     Vector3 pdir = p->dir;  
 
-    if ( dist2 < np->dist2[0] && (pdir.x*normal.x+pdir.y*normal.y+pdir.z*normal.z) < 0.0f) {
+    if ( dist2 < np->dist2[0] < 0.0f) {
         // we found a photon :) Insert it in the candidate list
 
         if ( np->found < np->max ) {

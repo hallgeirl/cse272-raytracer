@@ -17,6 +17,7 @@ void BuildSquare(const Vector3& min, const Vector3& max, const Vector3& normal, 
 struct hit_point
 {
     Vector3 x;
+    Vector3 theta_out; //outgoing direction
     Vector3 contrib;
     Vector3 N;
     Vector3 reflectance;  //reflectance at this point
