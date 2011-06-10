@@ -176,7 +176,7 @@ CircleSegment(const Vector3& rayOrigin, const Vector3& rayDir, const float radiu
 	Vector3 intersectP1 = rayOrigin + rayDir * t[0];
 	Vector3 intersectP2 = rayOrigin + rayDir * t[1];
 
-	float theta = acos(dot((intersectP1 - center).normalize(), (intersectP2 - center).normalize()));
+	float theta = acos(std::max(std::min(dot((intersectP1 - center).normalize(), (intersectP2 - center).normalize()), 1.f), -1.f));
 	float segArea = 0.5f * (theta - sin(theta)) * pow(radius, 2);
 
 	area = segArea;
@@ -213,7 +213,11 @@ AdjustCorners(const float& radius, const Vector3& position, const Vector3& norma
 			}
 		}
 	}
-	return area/areaBase;
+    float ret = area/areaBase;
+
+    if (ret != ret || area/areaBase > 1)
+        std::cout << areaBase << " " << area << std::endl;
+	return ret;
 }
 
 #endif

@@ -129,6 +129,7 @@ Scene::raytraceImage(Camera *cam, Image *img)
     m_pointMap.store(Vector3(0.1), Vector3(0,1,0), Vector3(0,1,0), 0.001, 0, true, -1, -1);
     m_pointMap.store(Vector3(0.2), Vector3(0,1,0), Vector3(0,1,0), 0.001, 0, true, -1, -1);
     m_pointMap.store(Vector3(0.3), Vector3(0,1,0), Vector3(0,1,0), 0.001, 0, true, -1, -1);
+    m_pointMap.store(Vector3(0.4), Vector3(0,1,0), Vector3(0,1,0), 0.001, 0, true, -1, -1);
 
 	//if (m_Points.size() != (width*height))
 	//	debug("uhohs\n");
@@ -410,7 +411,11 @@ void Scene::UpdatePhotonStats()
 //        float alpha = PHOTON_ALPHA + (1.-PHOTON_ALPHA)*(1.-exp(-f_alpha));
 
         // Set scaling factor for next photon pass
-		hp->scaling = AdjustCorners(hp->radius, hp->position, hp->normal);;
+		hp->scaling = AdjustCorners(hp->radius, hp->position, hp->normal);
+        if (hp->scaling != hp->scaling)
+        {
+            cout << "Scaling is NAN! Pos: " << hp->position << "; normal: " << hp->normal << "; radius: " << hp->radius << endl;
+        }
 //		hp->scaling = 1;
 
 		// only adding a ratio of the newly added photons
@@ -423,6 +428,22 @@ void Scene::UpdatePhotonStats()
 
 		// not sure about this flux acc, or about calculating the irradiance
 		hp->accFlux = ( hp->accFlux + hp->newFlux/hp->scaling) * delta;	
+
+//        if (hp->scaling != hp->scaling)
+//            cout << "SCALING IS NAN!" << endl;
+//
+//        if (delta < 0)
+//            cout << "Delta is " << delta << endl;
+//        if (delta != delta)
+//            cout << "DELTA IS NAN!" << endl;
+//        
+//        if (hp->accFlux != hp->accFlux)
+//            cout << "ACCFLUX IS NAN!" << endl;
+//
+//        if (hp->newFlux != hp->newFlux)
+//            cout << "NEWFLUX IS NAN!" << endl;
+//        if (hp->
+//        cout << 
 
 		// reset new values
 		hp->newPhotons = 0;

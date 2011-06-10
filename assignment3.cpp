@@ -96,8 +96,11 @@ makeTask3Scene()
 	g_scene->addLight(l);
     
     double e = 0.0005;
-//    double e = 0.;
-    Phong* gray = new Phong(Vector3(0.75));
+    Material* gray = new Phong(Vector3(0.75));
+#ifdef PHOTON_MAPPING
+    e = 0;
+#endif
+
 	// Floor
 	BuildSquare(Vector3(-1,-1,-1), Vector3(1,-1,1), Vector3(0,1,0), gray);
 	
