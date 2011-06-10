@@ -17,40 +17,38 @@ $$ F = \frac{\tau_{N}(x, w)}{(\pi R(x)^2) N_{emitted}}*\frac{N_{hit}}{N_{total}}
 
 Similar to Assignment 2, we adjusted the flux around the square edges. Initially, the scene corners were too bright since they sampled photons located within the radius. We added a normal check to ensure only the photons located on the same plane were accumulated. However, this resulted in very dark corners. We therefore decided to scale the contribution of photons that hit the boundary points whose radius extend beyond the diffuse squares. We calculated the scaling factor by utilizing the intersection points of the circle determined by the measurement point radius with each square's edges. The scaling factor is the ratio between the proportional area and the area assumed by the circle of radius $R(x)$. The scaling factor is applied to the newly accumulated flux $\tau_M$. While this approach is an approximation, we noticed an improvement in image quality above the previous two alternatives.
 
-The results can be seen in figures \ref{fig:progressive_irrad1}, \ref{fig:progressive_irrad10}, \ref{fig:progressive_irrad100} and \ref{fig:progressive_irrad1000}.
+The results can be seen in figures \ref{fig:adaptive_100000}, \ref{fig:adaptive_1000000}, \ref{fig:adaptive_10000000} and \ref{fig:adaptive_100000000}.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{plots/progressive_irrad_1mill}\\
-    \caption{Progressive photon mapping, 1 million photons}
-    \label{fig:progressive_irrad1}
+    \includegraphics[width=0.8\textwidth]{plots/adaptiveppm_gray_100000}\\
+    \caption{Adaptive photon mapping, .1 million photons}
+    \label{fig:adaptive_100000}
 \end{figure}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{plots/progressive_irrad_10mill}\\
-    \caption{Progressive photon mapping, 10 million photons}
-    \label{fig:progressive_irrad10}
+    \includegraphics[width=0.8\textwidth]{plots/adaptiveppm_gray_1000000}\\
+    \caption{Adaptive photon mapping, 1 million photons}
+    \label{fig:adaptive_1000000}
 \end{figure}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{plots/progressive_irrad_100mill}\\
-    \caption{Progressive photon mapping, 100 million photons}
-    \label{fig:progressive_irrad100}
+    \includegraphics[width=0.8\textwidth]{plots/adaptiveppm_gray_10000000}\\
+    \caption{Adaptive photon mapping, 10 million photons}
+    \label{fig:adaptive_10000000}
 \end{figure}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{plots/progressive_irrad_1bill}\\
-    \caption{Progressive photon mapping, 1 billion photons}
-    \label{fig:progressive_irrad1000}
+    \includegraphics[width=0.8\textwidth]{plots/adaptiveppm_gray_100000000}\\
+    \caption{Adaptive photon mapping, 100 million photons}
+    \label{fig:adaptive_10000000}
 \end{figure}
 \pagebreak
 
-
-Adaptive progressive photon mapping requires more than 100 million photons to converge to near the expected values of $0.72 \frac{W}{m^2}$ near the edges, although it does converge fairly well to $0.3 \frac{W}{m^2} $ near the middle of the interval. 
-
+We finally rendered a pretty scene!
 
 \subsection*{Error analysis}
 We compare each pixel value after the last sample ray for Monte Carlo path tracing to the measurement point to visualize how the errors decreased over time. We calculated the mean square error over the interval for different number of pixels, $Err = 1/N_p \sum_{i=1}^{N_p} (E_{i,a} - E_{i,p})^2$, where $E_{i,a}$ and $E_{i,p}$ is the pixel value for point $i$ for specified intervals of Adaptive Photon Mapping for 100 million photons, and Monte Carlo path tracing for ~2.6 billion samples. Figure \ref{fig:adaptive_msq} shows the mean square error for different number of samples.
@@ -62,7 +60,7 @@ We compare each pixel value after the last sample ray for Monte Carlo path traci
     \label{fig:adaptive_msq}
 \end{figure}
 
-Adaptive photon mapping converges quickly, but does not attain as small of a mean squared error as the following Metropolis method. While the image quality is comparible, we can only hypothesize that the methods differ *****
+Adaptive photon mapping converges quickly, but does not attain the same small mean squared error as the following Metropolis method. While the image quality is comparible between the methods, we can only hypothesize that the differ is due to *****
 
 
 
