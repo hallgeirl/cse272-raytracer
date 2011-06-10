@@ -1,0 +1,15 @@
+\section*{Task 1}
+Our first task was to render the scene using path tracing. We traced 10000 rays through each pixel. At each diffuse surface, we shot a new ray using the probability density function $p(x)=\cos theta / \pi$ where $\theta$ is the angle between the normal of the diffuse surface and the direction of the ray. This gives a total of approximately $2.62$ billion rays. Since we use a diffuse square light, the irradiance estimate becomes
+$$
+F(x) = \frac{1}{N} \sum_{i=1}^N \frac{f(x)/\pi \cos \theta}{\cos \theta / \pi} = \frac{1}{N} \sum_{i=1}^N f(x)
+$$
+
+where $f(x)$ is the value from the sample. Figures \ref{fig:pathtracing_gray} shows the final render of the scene. 
+\begin{figure}[H]
+    \includegraphics[width=0.5\textwidth]{imgs/pathtracing_gray}\\
+    \caption{Rendering, path tracing, 10000 samples per pixel}
+    \label{fig:pathtracing}
+\end{figure}
+
+With 10000 rays per pixel, this scene looks decent enough with path tracing. However, the rendering took a very long time.
+
