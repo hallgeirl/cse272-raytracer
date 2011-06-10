@@ -7,7 +7,7 @@ $$d_i = d_{i-1} + \gamma_i(a_i - a^*)$$
 $$\gamma_i = \frac{1}{i}$$
 $$a^* = 0.234$$
 
-This mutation strategy is applied in four dimensions; the photon direction in spherical coordinates and the position along the square light. Additionally for this assignment, we store the spherical coordinates for multiple bounces to mutate. This photon then becomes the good path if it hits a measurement point. Otherwise we sample the existing good path again. The measurement point's flux and radius are adjusted every 10,000 iterations. We found that a lower number of photons per pass gave us a sharper image. Initially we set the measurement point radius to $0.25$. On each pass, we adjust the radius $ \hat{R}(x) $ and \tau_N(x, \omega) according to the user-defined ratio $ \alpha $ set to 0.7. The only formula that differs from previous assignments is the flux correction premultiplying the BRDF $f_r(x,\omega,\omega_p)$ since we are now interested in the scene radiance:
+This mutation strategy is applied in four dimensions; the photon direction in spherical coordinates and the position along the square light. Additionally for this assignment, we store the spherical coordinates for multiple bounces to mutate. This photon then becomes the good path if it hits a measurement point. Otherwise we sample the existing good path again. The measurement point's flux and radius are adjusted every 10,000 iterations. We found that a lower number of photons per pass gave us a sharper image. Initially we set the measurement point radius to $0.25$. On each pass, we adjust the radius $ \hat{R}(x) $ and $\tau_N(x, \omega)$ according to the user-defined ratio $ \alpha $ set to 0.7. The only formula that differs from previous assignments is the flux correction premultiplying the BRDF $f_r(x,\omega,\omega_p)$ since we are now interested in the scene radiance:
 
 $$ \tau_N(x, \omega) = \sum_{p=1}^{N(x)} f_r(x,\omega,\omega_p){\phi}'(x_p, \omega_p) $$
 
@@ -21,28 +21,28 @@ The results can be seen in figures \ref{fig:adaptive_100000}, \ref{fig:adaptive_
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{plots/adaptiveppm_gray_100000}\\
+    \includegraphics[width=0.8\textwidth]{imgs/adaptiveppm_gray_100000}\\
     \caption{Adaptive photon mapping, .1 million photons}
     \label{fig:adaptive_100000}
 \end{figure}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{plots/adaptiveppm_gray_1000000}\\
+    \includegraphics[width=0.8\textwidth]{imgs/adaptiveppm_gray_1000000}\\
     \caption{Adaptive photon mapping, 1 million photons}
     \label{fig:adaptive_1000000}
 \end{figure}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{plots/adaptiveppm_gray_10000000}\\
+    \includegraphics[width=0.8\textwidth]{imgs/adaptiveppm_gray_10000000}\\
     \caption{Adaptive photon mapping, 10 million photons}
     \label{fig:adaptive_10000000}
 \end{figure}
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{plots/adaptiveppm_gray_100000000}\\
+    \includegraphics[width=0.8\textwidth]{imgs/adaptiveppm_gray_100000000}\\
     \caption{Adaptive photon mapping, 100 million photons}
     \label{fig:adaptive_10000000}
 \end{figure}
