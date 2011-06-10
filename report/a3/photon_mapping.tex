@@ -17,7 +17,7 @@ $$ F = \frac{\tau_{N}(x, w)}{(\pi R(x)^2) N_{emitted}}*\frac{N_{hit}}{N_{total}}
 
 Similar to Assignment 2, we adjusted the flux around the square edges. Initially, the scene corners were too bright since they sampled photons located within the radius. We added a normal check to ensure only the photons located on the same plane were accumulated. However, this resulted in very dark corners. We therefore decided to scale the contribution of photons that hit the boundary points whose radius extend beyond the diffuse squares. We calculated the scaling factor by utilizing the intersection points of the circle determined by the measurement point radius with each square's edges. The scaling factor is the ratio between the proportional area and the area assumed by the circle of radius $R(x)$. The scaling factor is applied to the newly accumulated flux $\tau_M$. While this approach is an approximation, we noticed an improvement in image quality above the previous two alternatives.
 
-The results can be seen in figures \ref{fig:adaptive_100000}, \ref{fig:adaptive_1000000}, \ref{fig:adaptive_10000000} and \ref{fig:adaptive_100000000}.
+The results can be seen in figures \ref{fig:adaptive_100000}, \ref{fig:adaptive_1000000}, \ref{fig:adaptive_10000000} and \ref{fig:adaptiveppm_gray_100000000}.
 
 \begin{figure}[H]
     \centering
@@ -51,7 +51,7 @@ The results can be seen in figures \ref{fig:adaptive_100000}, \ref{fig:adaptive_
 We finally rendered a pretty scene!
 
 \subsection*{Error analysis}
-We compare each pixel value after the last sample ray for Monte Carlo path tracing to the measurement point to visualize how the errors decreased over time. We calculated the mean square error over the interval for different number of pixels, $Err = 1/N_p \sum_{i=1}^{N_p} (E_{i,a} - E_{i,p})^2$, where $E_{i,a}$ and $E_{i,p}$ is the pixel value for point $i$ for specified intervals of Adaptive Photon Mapping for 100 million photons, and Monte Carlo path tracing for ~2.6 billion samples. Figure \ref{fig:adaptive_msq} shows the mean square error for different number of samples.
+We compare each pixel value after the last sample ray for Monte Carlo path tracing to the measurement point to visualize how the errors decreased over time. We calculated the mean square error over the interval for different number of pixels, $Err = 1/N_p \sum_{i=1}^{N_p} (F_{i,a} - F_{i,p})^2$, where $F_{i,a}$ and $F_{i,p}$ is the pixel value for point $i$ for specified intervals of Adaptive Photon Mapping for 100 million photons, and Monte Carlo path tracing for ~2.6 billion samples. Figure \ref{fig:adaptive_msq} shows the mean square error for different number of samples.
 
 \begin{figure}[H]
     \centering
