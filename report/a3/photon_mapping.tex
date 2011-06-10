@@ -1,24 +1,21 @@
 \section*{Task 2}
-Our second task was to estimate the irradiance using Progressive Photon mapping. Similar to Assignment 1, we sent out 100,000 photons for 1,000 passes totaling 100 million photons emitted from the square light, which is distributed according to $p(x)=\cos \theta/\pi$. Rather than sampling one point, we now divide the interval between A and B into 100 discrete measurement points. Initially we set the radius to $0.25$. On each pass, we adjust the radius $ \hat{R}(x) $ according to the user-defined ratio $ \alpha $ set to 0.7
+Our second task was to render a scene using Adaptive Progressive Photon mapping. We rendered a 512x512 image where each pixel is represented by a measurement point. We utilized our ray tracer from the previous course CSE 168 to handle the scene rendering. The initial pass traces a ray sent from each image pixel into the scene. The measurement point is stored at the first hit diffuse surface. Specular surfaces do not store measurement points, rather the point continues along the path, reducing the pixel contribution by the specular reflectance. We converted the existing photon map kd-tree to hold the measurement points since we noticed severe performance limitations with the large amount of stored points. 
 
-$$ \hat{R}(x) = R(x) - dR(x) = R(x)\sqrt{\frac{N(x)+\alpha M(x)}{N(x)+M(x)}} $$
+Adaptive photon mapping uses the adaptive Markov chain sampling to mutate the path and replica exchange to mix between uniform and Markov chain sampling to prevent becoming stuck any local peaks. During each successive photon pass, we first emit a photon from the square light in a randomly sampled direction, which is distributed according to $p(x)=\cos \theta/\pi$. This photon becomes the new good path if it hits a sample point. Otherwise we continue the pass by mutating the existing good path by the following:
+$$du_i = sgn(2\xi_1 - 1)\xi_2^{(\frac{1}{d_i}+1)}$$
+$$d_i = d_{i-1} + \gamma_i(a_i - a^*)$$
+$$\gamma_i = \frac{1}{i}$$
+$$a^* = 0.234$$
 
-Where N(x) is the previously accumulated photons and M(x) is the newly added photons in the current photon tracing pass for each measurement point in the scene.
-$$ \tau_{\hat{N}}(x, w) = \tau_{N+M}(x, w)\frac{N(x) + \alpha M(x)}{N(x) + M(x)} $$
-Since we are again interested in the irradiance along the line, we calculate the irradiance by normalizing $ \tau_{\hat{N}}(x, w) $ by the number of emitted photons and the adjusted radius $\hat{R}(x)$.
+This mutation strategy is applied in four dimensions; the photon direction in spherical coordinates and the position along the square light. Additionally for this assignment, we store the spherical coordinates for multiple bounces to mutate. This photon then becomes the good path if it hits a measurement point. Otherwise we sample the existing good path again. The measurement point's flux and radius are adjusted every 10,000 iterations. We found that a lower number of photons per pass gave us a sharper image. Initially we set the measurement point radius to $0.25$. On each pass, we adjust the radius $ \hat{R}(x) $ and \tau_N(x, \omega) according to the user-defined ratio $ \alpha $ set to 0.7. The only formula that differs from previous assignments is the flux correction premultiplying the BRDF $f_r(x,\omega,\omega_p)$ since we are now interested in the scene radiance:
 
-The edges of the interval cause problems, because parts of the area of the measurement points fall outside the square they are placed on, and thus would get an underestimated irradiance because of this. We therefore decided to scale the contribution of photons that hit the boundary points whose radius extend beyond the diffuse square. We calculated the scaling factor by utilizing the intersection points of the circle determined by the measurement point radius with the square edges along the z-axis. Then we find the segment area using the angle $\theta$ determined by the dot product of the measurement point position to the intersection points:
+$$ \tau_N(x, \omega) = \sum_{p=1}^{N(x)} f_r(x,\omega,\omega_p){\phi}'(x_p, \omega_p) $$
 
-$$ A_{real} = \pi R(x)^2 - \frac{1}{2} R(x)^2 (\theta - \sin{\theta}) $$
+We normalize the radiance for each hit point by the probability of hitting a measurement point using a uniform photon.
 
-The scaling factor is basically the ratio between the real area and the area assumed by the circle of radius $R(x)$, so
+$$ F = \frac{\tau_{N}(x, w)}{(\pi R(x)^2) N_{emitted}}*\frac{N_{hit}}{N_{total}} $$
 
-$$scale = \frac{\pi R(x)^2}{\pi R(x)^2 - \frac{1}{2} R(x)^2 (\theta - \sin{\theta})} = 1-\frac{2\pi}{\theta - \sin{\theta}}$$
-
-While this method doesn't solve the fact that fewer points would hit the edge measurement points, and thus have a more noisy result on the edges, the alternative was to crowd the measurement points together for the radii to fit within the square to get accurate irradiance. 
-
-The irradiance is finally calculated normally with
-$$ F = \frac{\tau_{N}(x, w)}{(\pi R(x)^2) N_{emitted}} $$
+Similar to Assignment 2, we adjusted the flux around the square edges. Initially, the scene corners were too bright since they sampled photons located within the radius. We added a normal check to ensure only the photons located on the same plane were accumulated. However, this resulted in very dark corners. We therefore decided to scale the contribution of photons that hit the boundary points whose radius extend beyond the diffuse squares. We calculated the scaling factor by utilizing the intersection points of the circle determined by the measurement point radius with each square's edges. The scaling factor is the ratio between the proportional area and the area assumed by the circle of radius $R(x)$. The scaling factor is applied to the newly accumulated flux $\tau_M$. While this approach is an approximation, we noticed an improvement in image quality above the previous two alternatives.
 
 The results can be seen in figures \ref{fig:progressive_irrad1}, \ref{fig:progressive_irrad10}, \ref{fig:progressive_irrad100} and \ref{fig:progressive_irrad1000}.
 
@@ -50,64 +47,23 @@ The results can be seen in figures \ref{fig:progressive_irrad1}, \ref{fig:progre
     \label{fig:progressive_irrad1000}
 \end{figure}
 \pagebreak
-Progressive photon mapping requires more than 100 million photons to converge to near the expected values of $0.72 \frac{W}{m^2}$ near the edges, although it does converge fairly well to $0.3 \frac{W}{m^2} $ near the middle of the interval. 
 
-\section*{Task 3}
-The third task implements the recently developed Adaptive Photon Mapping method. This technique uses the adaptive Markov chain sampling to mutate the path and replica exchange to mix between uniform and Markov chain sampling to prevent becoming stuck any local peaks. There are again 100 measurement points with an initial radius $ R(x) $ of 0.25. 
 
-In order to get the irradiance estimates to converge as $t\to \infty$, we had to implement an adaptive $\alpha$ that scales with the number of photons that hit a measurement point. We noticed that as the radii decreased, the irradiance estimates was higher than expected at the edge points; although we do not know the reason, we believe it's due to floating point precision errors. To solve this, we designed a new $\alpha(N)=0.7+0.3(1-e^{5\cdot 10^{-6}N})$ where $N$ is the number of accumulated photons for a measurement point. The value $5\cdot 10^{-6}$ was determined empirically. This way, the radius of points with a smaller radius would decrease more slowly and thus reducing floating point errors. 
+Adaptive progressive photon mapping requires more than 100 million photons to converge to near the expected values of $0.72 \frac{W}{m^2}$ near the edges, although it does converge fairly well to $0.3 \frac{W}{m^2} $ near the middle of the interval. 
 
-During each photon pass, we first emit a photon from the square light in a randomly sampled direction. This photon becomes the new good path if it hits a sample point. Otherwise we continue the pass by mutating the existing good path by the following:
-$$du_i = sgn(2\xi_1 - 1)\xi_2^{(\frac{1}{d_i}+1)}$$
-$$d_i = d_{i-1} + \gamma_i(a_i - a^*)$$
-$$\gamma_i = \frac{1}{i}$$
-$$a^* = 0.234$$
-
-This mutation strategy is applied in four dimensions; the photon direction in spherical coordinates and the position along the square light. This photon then becomes the good path if it hits a sample point. Otherwise we sample the existing good path again. The measurement point's flux and radius are adjusted every 1,000,000 iterations. We found that a higher number of photons per pass gave us a more stable convergence. The same formulas for radius and flux updates as for progressive photon mapping were used, although with a variable $\alpha$. However, we normalize the final irradiance estimate for each hit point by the probability of hitting a measurement point using a uniform photon.
-$$ F = \frac{\tau_{N}(x, w)}{(\pi R(x)^2) N_{emitted}}*\frac{N_{hit}}{N_{total}} $$
-
-The results are plotted in figures \ref{fig:adaptive_irrad1} and \ref{fig:adaptive_irrad10} and \ref{fig:adaptive_irrad100}.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.8\textwidth]{plots/adaptiveppm_irrad_1mill}\\
-    \caption{Adaptive photon mapping, 1 million photons}
-    \label{fig:adaptive_irrad1}
-\end{figure}
-
-\begin{figure}
-    \centering
-    \includegraphics[width=0.8\textwidth]{plots/adaptiveppm_irrad_10mill}\\
-    \caption{Adaptive photon mapping, 10 million photons}
-    \label{fig:adaptive_irrad10}
-\end{figure}
-
-\begin{figure}
-    \centering
-    \includegraphics[width=0.8\textwidth]{plots/adaptiveppm_irrad_100mill}\\
-    \caption{Adaptive photon mapping, 100 million photons}
-    \label{fig:adaptive_irrad100}
-\end{figure}
-
-We see that for the 10 and 100 million experiments, adaptive photon mapping converges about 10 times faster than progressive photon mapping. However, due to our choice of using 1 million photons per update pass, the 1 million photon experiment is not as accurate as progressive photon mapping.
 
 \subsection*{Error analysis}
-We compare the irradiance for each discrete point after the last sample ray for Monte Carlo path tracing to the measurement point irradiance to visualize how the errors decreased over time. We calculated the mean square error over the interval for different number of sample points, $Err = 1/N_p \sum_{i=1}^{N_p} (E_{i,a} - E_{i,p})^2$, where $E_{i,a}$ and $E_{i,p}$ is the irradiance for point $i$ for Adaptive Photon Mapping emitting 100 million photons, and Monte Carlo path tracing for 1 billion samples. Figure \ref{fig:adaptive_msq} shows the mean square error for different number of samples.
+We compare each pixel value after the last sample ray for Monte Carlo path tracing to the measurement point to visualize how the errors decreased over time. We calculated the mean square error over the interval for different number of pixels, $Err = 1/N_p \sum_{i=1}^{N_p} (E_{i,a} - E_{i,p})^2$, where $E_{i,a}$ and $E_{i,p}$ is the pixel value for point $i$ for specified intervals of Adaptive Photon Mapping for 100 million photons, and Monte Carlo path tracing for ~2.6 billion samples. Figure \ref{fig:adaptive_msq} shows the mean square error for different number of samples.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{plots/adaptiveppm_msq}\\
+    \includegraphics[width=0.8\textwidth]{plots/adaptiveppm_gray_msq}\\
     \caption{Adaptive photon mapping, mean square error}
     \label{fig:adaptive_msq}
 \end{figure}
 
-Considering the path tracing solution has noise in it, there is a point where the measured error does not diminish any more. Looking at figure \ref{fig:adaptive_best}, 100 million photons using adaptive photon mapping is comparable to 1 billion photons using progressive photon mapping, and 1 billion Monte Carlo paths, showing a convergence speedup of about 10x for this scene.
+Adaptive photon mapping converges quickly, but does not attain as small of a mean squared error as the following Metropolis method. While the image quality is comparible, we can only hypothesize that the methods differ *****
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.8\textwidth]{plots/adaptiveppm_irrad_best}\\
-    \caption{Adaptive photon mapping, Best}
-    \label{fig:adaptive_best}
-\end{figure}
+
 
 
