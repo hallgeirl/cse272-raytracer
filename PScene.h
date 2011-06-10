@@ -61,16 +61,20 @@ public:
     void addLight(PointLight* pObj)     {m_lights.push_back(pObj);}
     const Lights* lights() const        {return &m_lights;}
 
-	void addPoint(const Vector3& inPosition, const Vector3& inNormal, const Vector3& inDir, const float inBRDF, const float inRadius, const bool inbLight)	
+	void addPoint(const Vector3& inPosition, const Vector3& inNormal, const Vector3& inDir, const float inBRDF, const float inRadius, const bool inbLight, int x, int y)	
 	{
 		if (!inbLight)
 		{
-			Point* hp = m_pointMap.store(inPosition, inNormal, inDir, inRadius, inBRDF, inbLight);
+			Point* hp = m_pointMap.store(inPosition, inNormal, inDir, inRadius, inBRDF, inbLight, x, y);
 			if (hp != NULL)
 				m_Points.push_back(hp);
 		}
 		else 
+        {
 			m_Points.push_back(new Point());
+            m_Points.back()->i = y;
+            m_Points.back()->j = x;
+        }
 	}
 	//const Points* Points() const	{return &m_Points;}
 
@@ -83,7 +87,7 @@ public:
     void raytraceImage(Camera *cam, Image *img);
     bool trace(HitInfo& minHit, const Ray& ray,
                float tMin = 0.0f, float tMax = MIRO_TMAX) const;
-	bool traceScene(const Ray& ray, Vector3 contribution, int depth);
+	bool traceScene(const Ray& ray, Vector3 contribution, int depth, int x, int y);
 
 	void UpdatePhotonStats();
 	void RenderPhotonStats(Vector3 *tempImage, const int width, const int height);

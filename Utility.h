@@ -195,13 +195,14 @@ AdjustCorners(const float& radius, const Vector3& position, const Vector3& norma
 		Vector3 origin(i);
 		for (int n = 0; n < 3; ++n)
 		{
-			Vector3 dir;
+			Vector3 dir(0);
 			switch(n)
 			{
 				case 0: dir.x = -1*i; break;
 				case 1: dir.y = -1*i; break;
 				case 2: dir.z = -1*i; break;
 			}
+
 			//skip the normal direction
 			if (abs(dot(dir, normal)) > epsilon)
 				continue;

@@ -112,9 +112,10 @@ Scene::raytraceImage(Camera *cam, Image *img)
 
             ray = cam->eyeRay(j, i, width, height, false);
 
-			traceScene(ray, Vector3(1), depth);
-			m_Points[m_Points.size()-1]->j = j;
-			m_Points[m_Points.size()-1]->i = i;
+			traceScene(ray, Vector3(1), depth, j, i);
+//            addPoint(
+//			m_Points[m_Points.size()-1]->j = j;
+//			m_Points[m_Points.size()-1]->i = i;
 
 			#ifdef STATS
 			Stats::Primary_Rays++;
@@ -124,6 +125,10 @@ Scene::raytraceImage(Camera *cam, Image *img)
         printf("Rendering Progress: %.3f%%\r", i/float(img->height())*100.0f);
         fflush(stdout);
     }
+
+    m_pointMap.store(Vector3(0.1), Vector3(0,1,0), Vector3(0,1,0), 0.001, 0, true, -1, -1);
+    m_pointMap.store(Vector3(0.2), Vector3(0,1,0), Vector3(0,1,0), 0.001, 0, true, -1, -1);
+    m_pointMap.store(Vector3(0.3), Vector3(0,1,0), Vector3(0,1,0), 0.001, 0, true, -1, -1);
 
 	//if (m_Points.size() != (width*height))
 	//	debug("uhohs\n");
@@ -230,7 +235,7 @@ Scene::trace(HitInfo& minHit, const Ray& ray, float tMin, float tMax) const
     return result;
 }
 
-bool Scene::traceScene(const Ray& ray, Vector3 contribution, int depth)
+bool Scene::traceScene(const Ray& ray, Vector3 contribution, int depth, int x, int y)
 {
     HitInfo hitInfo;
     bool hit = false;
@@ -246,14 +251,14 @@ bool Scene::traceScene(const Ray& ray, Vector3 contribution, int depth)
 			//if diffuse material, send trace with RandomRay generate by Monte Carlo
 			if (hitInfo.material->isDiffuse())
 			{
-				g_scene->addPoint(hitInfo.P, hitInfo.N, ray.d, contribution.average(), INITIAL_RADIUS, false);
+				g_scene->addPoint(hitInfo.P, hitInfo.N, ray.d, contribution.average(), INITIAL_RADIUS, false, x, y);
 			}
 			
 			//if reflective material, send trace with ReflectRay
 			if (hitInfo.material->isReflective())
 			{
 				Ray reflectRay = ray.reflect(hitInfo);
-				traceScene(reflectRay, contribution*hitInfo.material->getReflection(), depth);
+				traceScene(reflectRay, contribution*hitInfo.material->getReflection(), depth, x, y);
 			}
 
 			//if refractive material, send trace with RefractRay
@@ -265,18 +270,18 @@ bool Scene::traceScene(const Ray& ray, Vector3 contribution, int depth)
 		        {
 					//Send a reflective ray (Fresnel reflection)
 					Ray reflectRay = ray.reflect(hitInfo);
-		            traceScene(reflectRay, contribution * hitInfo.material->getRefraction() * Rs, depth);
+		            traceScene(reflectRay, contribution * hitInfo.material->getRefraction() * Rs, depth, x, y);
 		        }
 			    
 				Ray	refractRay = ray.refract(hitInfo);
-				traceScene(refractRay, contribution * hitInfo.material->getRefraction() * (1.f-Rs), depth);
+				traceScene(refractRay, contribution * hitInfo.material->getRefraction() * (1.f-Rs), depth, x, y);
 			}
 
             PointLight *l = dynamic_cast<PointLight*>(hitInfo.object);
 			if (l != NULL)
 			{
 				//this means we hit an emissive material (light), so create a default measurement point
-				g_scene->addPoint(Vector3(0.f), Vector3(0.f), Vector3(0.f), 0.f, 0.f, true);
+				g_scene->addPoint(Vector3(0.f), Vector3(0.f), Vector3(0.f), 0.f, 0.f, true, x, y);
                 g_scene->m_Points.back()->accFlux = l->radiance(hitInfo.P, ray.d)*contribution.average();
 			}
 		}
@@ -338,10 +343,13 @@ bool Scene::UpdateMeasurementPoints(const Vector3& pos, const Vector3& normal, c
 
     np.dist2 = new float[npoints+1];
     np.index = new Point*[npoints+1];
-	m_pointMap.find_points(&np, pos, normal, max_radius+epsilon, npoints);
+	m_pointMap.find_points(&np, pos, max_radius + epsilon, npoints);
 	//m_pointMap.find_points(&np, pos, normal, INITIAL_RADIUS, npoints);
 
-	for (int i=1; i<=np.found; i++) {
+//    cout << np.found << endl;
+
+	for (int i=1; i<=np.found; i++) 
+    {
 		Point *hp = np.index[i];
 
 //	for (int n = 0; n <  m_Points.size(); ++n)
@@ -389,7 +397,7 @@ void Scene::UpdatePhotonStats()
 		if (hp->bLight)
 			continue;
 
-		if (hp->radius > max_radius)
+        if (hp->radius > max_radius)
 			max_radius = hp->radius;
 
 		// continue if no new photons have been added
@@ -403,12 +411,16 @@ void Scene::UpdatePhotonStats()
 
         // Set scaling factor for next photon pass
 		hp->scaling = AdjustCorners(hp->radius, hp->position, hp->normal);;
+//		hp->scaling = 1;
 
 		// only adding a ratio of the newly added photons
 		float delta = (hp->accPhotons + alpha * hp->newPhotons)/(hp->accPhotons + hp->newPhotons);
 		hp->radius *= sqrt(delta);
-		hp->accPhotons += (int)(alpha * hp->newPhotons);
-		
+//		hp->accPhotons += (int)(alpha * hp->newPhotons);
+		hp->accPhotons += floor(alpha * (double)hp->newPhotons + .5);
+	
+//        cout << hp->newPhotons << endl;
+
 		// not sure about this flux acc, or about calculating the irradiance
 		hp->accFlux = ( hp->accFlux + hp->newFlux/hp->scaling) * delta;	
 
@@ -436,7 +448,8 @@ void Scene::RenderPhotonStats(Vector3 *tempImage, const int width, const int hei
 
 		if (hp->bLight)
 		{
-			tempImage[hp->i*width+hp->j] = hp->accFlux;
+            if (hp->i >= 0 && hp->j >= 0)
+    			tempImage[hp->i*width+hp->j] = hp->accFlux;
 			continue;
 		}
 
@@ -448,8 +461,9 @@ void Scene::RenderPhotonStats(Vector3 *tempImage, const int width, const int hei
 
 		long double A = PI * pow(hp->radius, 2);
 
-		long double result = hp->accFlux / A / (long double)m_photonsEmitted * ((long double)m_photonsUniform / (long double)m_photonsEmitted)*hp->brdf;
-
+		long double result = hp->accFlux / A / (long double)m_photonsEmitted * ((long double)m_photonsUniform / (long double)m_photonsEmitted) * hp->brdf;
+//        cout << hp->brdf << endl;
+//p*hp->brdf
 		tempImage[hp->i*width+hp->j] = Vector3(result)/PI;
 	}
 	//if (n != (width*height))
@@ -529,26 +543,42 @@ void Scene::AdaptivePhotonPasses()
 	long mutated = 1;
 	long accepted = 0;
 
-    //int Nphotons = 100000001;
-    int Nphotons = 1000001;
+    int Nphotons = 100000001;
+//    int Nphotons = 1000001;
+
+    cout <<"Finding a good path..." << endl;
 
 	//find starting good path
 	do
 	{
         goodPath.Origin = light->samplePhotonOrigin();
         goodPath.Direction = light->samplePhotonDirection();
+//        cout << goodPath.Origin << " " << goodPath.Direction << endl;
 	} while (tracePhoton(goodPath, goodPath.Origin, goodPath.Direction, power, 0) == 0);
+
+    cout << "Found a good path." << endl;
 
     long double msq = 0;
 	for (m_photonsEmitted = 0; m_photonsEmitted < Nphotons; m_photonsEmitted++)
     {
 		if (m_photonsEmitted > 0 && m_photonsEmitted % 10000 == 0)
+        {
 			UpdatePhotonStats();
+//            for (int i = 0; i < m_Points.size() && m_photonsEmitted > 100000; i++)
+//            {
+//                Point* hp = m_Points.at(i);
+//                if (hp->radius == INITIAL_RADIUS)
+//                {
+//                    printf("Pixel at (%f, %f, %f) [%d, %d] is unchanged.\n", hp->position.x, hp->position.y, hp->position.z, hp->j, hp->i);
+//                }
+//            }
+//            cout << "Current max radius: " << max_radius << endl;
+        }
 
         if (m_photonsEmitted > 0 && m_photonsEmitted % 10000 == 0)
         {
 
-			debug("Photons emitted %d of %d [%f%%] MSQ: %Lf      \r", m_photonsEmitted, Nphotons, 100.f*(float)m_photonsEmitted/(float)Nphotons, msq);
+			debug("Photons emitted %d of %d [%f%%] MSQ: %Lf Max radius: %6.2f \r", m_photonsEmitted, Nphotons, 100.f*(float)m_photonsEmitted/(float)Nphotons, msq, max_radius);
 			//PrintPhotonStats();
         }
 
@@ -596,9 +626,6 @@ void Scene::AdaptivePhotonPasses()
             }
         }
     
-
-
-
         //Test random photon path
         Path uniformPath(light->samplePhotonOrigin(), light->samplePhotonDirection());
 		if (tracePhoton(uniformPath, uniformPath.Origin, uniformPath.Direction, power, 0) > 0)
@@ -656,6 +683,7 @@ int Scene::tracePhoton(const Path& path, const Vector3& position, const Vector3&
 	++depth;
     if (trace(hit, ray, 0.0f, MIRO_TMAX))
     {
+        PHOTON_DEBUG(endl << "Photon hit at " << hit.P);
 		//SPECIAL: return if hit triangle backface
 		if (dot(ray.d, hit.N) > 0)
 			return 0;

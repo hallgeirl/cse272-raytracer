@@ -98,6 +98,20 @@ void Point_map :: locate_points(
     Point *p = &points[index];
     float dist1;
 
+//    for (int i = 0; i < stored_points; i++)
+//    {
+//        Point* pp = &points[i];
+//        if (pp->j == 176 && pp->i == 303)
+//            cout << endl << "IT'S HERE!!!" << endl;
+//    }
+//    cout << stored_points << endl;
+//    for (int i = 0; i < stored_points; i++)
+//    {
+//        Point* pp = &points[i];
+//        if (pp->j == 176 && pp->i == 303)
+//            cout << endl << "IT'S HERE!!!" << endl;
+//    }
+
     if (index<half_stored_points) {
 
         switch(p->plane)
@@ -109,13 +123,13 @@ void Point_map :: locate_points(
         //dist1 = np->pos[ p->plane ] - p->pos[ p->plane ];
 
         if (dist1>0.0) { // if dist1 is positive search right plane
-            locate_points( np, 2*index+1, normal);
+            locate_points( np, 2*index+1);
             if ( dist1*dist1 < np->dist2[0] )
-                locate_points( np, 2*index, normal );
+                locate_points( np, 2*index);
         } else {         // dist1 is negative search left first
-            locate_points( np, 2*index, normal );
+            locate_points( np, 2*index);
             if ( dist1*dist1 < np->dist2[0] )
-                locate_points( np, 2*index+1, normal );
+                locate_points( np, 2*index+1);
         }
     }
 
@@ -128,9 +142,8 @@ void Point_map :: locate_points(
     dist1 = p->position.z - np->pos.z;
     dist2 += dist1*dist1;
 
-    Vector3 pdir = p->dir;  
 
-    if ( dist2 < np->dist2[0] < 0.0f) {
+    if ( dist2 < np->dist2[0]) {
         // we found a photon :) Insert it in the candidate list
 
         if ( np->found < np->max ) {
@@ -202,61 +215,66 @@ Point* Point_map :: store(
         const Vector3& dir,			   
         const float radius,			   
         const float brdf,
-        const bool bLight)			   
+        const bool bLight,
+        int x, int y) //x,y is pixel position
 //***************************
 {
-  if (stored_points>=max_points)
-    return NULL;
+    if (stored_points>=max_points)
+        return NULL;
 
-  if (bLight)
-	  printf("Invalid point created in point map");
+//    if (bLight)
+//        printf("Invalid point created in point map");
 
-  stored_points++;
-  //Point *const node = &points[stored_points];
-  Point *node = &points[stored_points];
+    stored_points++;
+    //Point *const node = &points[stored_points];
+    Point *node = &points[stored_points];
 
-  node->position = pos;
-  node->normal = normal;
-  node->dir = dir;
-  node->radius = radius;
-  node->brdf = brdf;
-  node->bLight = bLight;
-  node->accFlux = 0.f;
-  node->accPhotons = 0;
-  node->newFlux = 0.f;
-  node->newPhotons = 0;
-  node->scaling = 1.f;
+    node->position = pos;
+    node->normal = normal;
+    node->dir = dir;
+    node->radius = radius;
+    node->brdf = brdf;
+    node->bLight = bLight;
+    node->accFlux = 0.f;
+    node->accPhotons = 0;
+    node->newFlux = 0.f;
+    node->newPhotons = 0;
+    node->scaling = 1.f;
+    node->i = y;
+    node->j = x;
 
-	if (node->position.x < bbox_min.x)
-	  bbox_min.x = node->position.x;
-	if (node->position.x > bbox_max.x)
-	  bbox_max.x = node->position.x;
 
-	if (node->position.y < bbox_min.y)
-	  bbox_min.y = node->position.y;
-	if (node->position.y > bbox_max.y)
-	  bbox_max.y = node->position.y;
 
-	if (node->position.z < bbox_min.z)
-	  bbox_min.z = node->position.z;
-	if (node->position.z > bbox_max.z)
-	  bbox_max.z = node->position.z;
-	
-	int theta = int( acos(dir.z)*(256.0/M_PI) );
-  if (theta>255)
-    node->theta = 255;
-  else
-   node->theta = (unsigned char)theta;
+    if (node->position.x < bbox_min.x)
+        bbox_min.x = node->position.x;
+    if (node->position.x > bbox_max.x)
+        bbox_max.x = node->position.x;
 
-  int phi = int( atan2(dir.y,dir.x)*(256.0/(2.0*M_PI)) );
-  if (phi>255)
-    node->phi = 255;
-  else if (phi<0)
-    node->phi = (unsigned char)(phi+256);
-  else
-    node->phi = (unsigned char)phi;
+    if (node->position.y < bbox_min.y)
+        bbox_min.y = node->position.y;
+    if (node->position.y > bbox_max.y)
+        bbox_max.y = node->position.y;
 
-  return node;
+    if (node->position.z < bbox_min.z)
+        bbox_min.z = node->position.z;
+    if (node->position.z > bbox_max.z)
+        bbox_max.z = node->position.z;
+
+    int theta = int( acos(dir.z)*(256.0/M_PI) );
+    if (theta>255)
+        node->theta = 255;
+    else
+        node->theta = (unsigned char)theta;
+
+    int phi = int( atan2(dir.y,dir.x)*(256.0/(2.0*M_PI)) );
+    if (phi>255)
+        node->phi = 255;
+    else if (phi<0)
+        node->phi = (unsigned char)(phi+256);
+    else
+        node->phi = (unsigned char)phi;
+
+    return node;
 }
 
 /* empty the  flat array 

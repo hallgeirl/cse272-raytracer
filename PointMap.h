@@ -69,7 +69,8 @@ public:
     const Vector3& dir,			   // point direction
 	const float radius,			   // initial radius
 	const float brdf,			   // surface brdf
-	const bool bLight);			   // if valid point
+	const bool bLight,
+    int x, int y);			   // if valid point
 
   void empty();
 
