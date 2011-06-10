@@ -51,7 +51,7 @@ The results can be seen in figures \ref{fig:adaptive_100000}, \ref{fig:adaptive_
 We finally rendered a pretty scene!
 
 \subsection*{Error analysis}
-We compare each pixel value after the last sample ray for Monte Carlo path tracing to the measurement point to visualize how the errors decreased over time. We calculated the mean square error over the interval for different number of pixels, $Err = 1/N_p \sum_{i=1}^{N_p} (F_{i,a} - F_{i,p})^2$, where $F_{i,a}$ and $F_{i,p}$ is the pixel value for point $i$ for specified intervals of Adaptive Photon Mapping for 100 million photons, and Monte Carlo path tracing for ~2.6 billion samples. Figure \ref{fig:adaptive_msq} shows the mean square error for different number of samples.
+We compare each pixel value after the last sample ray for Monte Carlo path tracing to each measurement point in order to visualize how the errors decreased over time. We calculated the mean square error over the interval for different number of pixels, $Err = 1/N_p \sum_{i=1}^{N_p} (F_{i,a} - F_{i,p})^2$, where $F_{i,a}$ and $F_{i,p}$ is the pixel value for point $i$ for specified intervals of Adaptive Photon Mapping for 100 million photons, and Monte Carlo path tracing for ~2.6 billion samples. Figure \ref{fig:adaptive_msq} shows the mean square error for different number of samples.
 
 \begin{figure}[H]
     \centering
@@ -60,7 +60,7 @@ We compare each pixel value after the last sample ray for Monte Carlo path traci
     \label{fig:adaptive_msq}
 \end{figure}
 
-Adaptive photon mapping converges quickly, but does not attain the same small mean squared error as the following Metropolis method. While the image quality is comparible between the methods, we can only hypothesize that the differ is due to *****
+Adaptive photon mapping converges quickly, but contains a larger mean squared error than the following Metropolis method. We tried a variety of debugging methods to identify the 0.02 discrepancy that met with little success. However, despite the small difference, we believe the image quality is comparible to Metropolis. 
 
 
 
